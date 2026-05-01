@@ -194,6 +194,11 @@
   margin-top: 12px;
 }
 
+.quote-tag-cat {
+  opacity: 0.5;
+  margin-left: 4px;
+}
+
 /* Quote Actions */
 .quote-actions {
   display: flex;

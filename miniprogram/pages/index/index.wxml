@@ -2,7 +2,7 @@
   <!-- Header -->
   <view class="header">
     <view class="header-title">
-      <text class="logo">微光</text>
+      <text class="logo">Glimmer</text>
       <text class="slogan">每日微光，照亮心房</text>
     </view>
     <view class="header-bulb">
@@ -29,7 +29,10 @@
       <text class="quote-en" wx:if="{{currentQuote.en}}">{{currentQuote.en}}</text>
       <text class="quote-source">——《{{currentQuote.source}}》</text>
       <text class="quote-context" wx:if="{{currentQuote.context}}">{{currentQuote.context}}</text>
-      <text class="quote-tag" wx:if="{{currentQuote.tag}}">{{currentQuote.tag}}</text>
+      <text class="quote-tag" wx:if="{{currentQuote.tag}}">
+        <text>{{currentQuote.tag}}</text>
+        <text wx:if="{{categoryText}}" class="quote-tag-cat"> · {{categoryText}}</text>
+      </text>
 
       <!-- Actions -->
       <view class="quote-actions">

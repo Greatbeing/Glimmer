@@ -25,13 +25,17 @@ Page({
     const store = this.getStore()
     const dots = this.data.dots.map((_, i) => i === this.data.currentIndex ? 1 : 0)
 
+    const categoryMap = { literature: '文学', philosophy: '哲学', psychology: '心理', counterintuitive: '反常识' }
+    const categoryText = categoryMap[q.category] || ''
+
     this.setData({
       currentQuote: q,
       currentIndex: this.data.currentIndex,
       dots,
       isLiked: store.likedQuotes.includes(q.id),
       isCaught: store.caughtQuotes.some(x => x.id === q.id),
-      likeCount: Math.floor(Math.random() * 300) + 50
+      likeCount: Math.floor(Math.random() * 300) + 50,
+      categoryText
     })
   },
 
