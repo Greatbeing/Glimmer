@@ -1449,10 +1449,33 @@ const quoteCache = {
     localStorage.setItem(this.historyKey, JSON.stringify(history));
   },
   
-  // Simple similarity check (based on exact match for now)
+  // Similarity check using Levenshtein distance
+  similarity(a, b) {
+    if (!a || !b) return 0;
+    if (a === b) return 1;
+    const longer = a.length > b.length ? a : b;
+    const shorter = a.length > b.length ? b : a;
+    if (longer.length === 0) return 1;
+    const costs = [];
+    for (let i = 0; i <= shorter.length; i++) {
+      let last = i;
+      for (let j = 0; j <= longer.length; j++) {
+        if (i === 0) costs[j] = j;
+        else if (j === 0) costs[j] = last;
+        else {
+          const tmp = costs[j];
+          costs[j] = Math.min(costs[j - 1] + 1, last + 1, last + (shorter[i - 1] === longer[j - 1] ? 0 : 1));
+          last = tmp;
+        }
+      }
+    }
+    return 1 - costs[longer.length] / longer.length;
+  },
+  
+  // Check if quote is duplicate based on 80% similarity
   isDuplicate(quote) {
     const history = this.getHistory();
-    return history.includes(quote.zh);
+    return history.some(h => this.similarity(h, quote.zh) > 0.8);
   },
   
   async next() {
@@ -1547,11 +1570,10 @@ const quoteRouter = {
   },
   
   getFallbackQuote() {
-    // Use preset quotes as fallback
-    currentIndex = (currentIndex + 1) % quotes.length;
-    currentQuote = quotes[currentIndex];
+    // Return a random preset quote without mutating state
+    const idx = Math.floor(Math.random() * quotes.length);
     return {
-      ...currentQuote,
+      ...quotes[idx],
       isLLM: false
     };
   }
@@ -1568,9 +1590,11 @@ async function nextQuote() {
     try {
       const newQuote = await quoteRouter.getNextQuote();
       currentQuote = newQuote;
-      // Add to quotes array for pagination dots
-      quotes.push(newQuote);
-      currentIndex = quotes.length - 1;
+      // Only add to quotes array if it's a new LLM quote
+      if (newQuote.isLLM) {
+        quotes.push(newQuote);
+        currentIndex = quotes.length - 1;
+      }
       showQuote('next');
     } catch(e) {
       showToast('加载失败，稍后再试');
@@ -1847,6 +1871,14 @@ const quoteGenerator = {
         if (!quote[field]) {
           throw new Error(`缺少字段: ${field}`);
         }
+      }
+      
+      // Ensure category and badge are set (LLM may not return them)
+      if (!quote.category) {
+        quote.category = cat.category;
+      }
+      if (!quote.badge) {
+        quote.badge = cat.badge;
       }
       
       // Set additional fields

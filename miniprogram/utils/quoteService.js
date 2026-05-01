@@ -167,7 +167,8 @@ const QuoteGenerator = {
         success(res) {
           if (res.statusCode === 200 && res.data.choices && res.data.choices[0]) {
             const raw = res.data.choices[0].message.content.trim()
-            const jsonMatch = raw.match(/\{[^}]+\}/s)
+            // Use [\s\S]*? to match nested JSON objects (not [^}]+)
+            const jsonMatch = raw.match(/\{[\s\S]*\}/)
             if (!jsonMatch) return reject(new Error('返回格式不正确'))
 
             try {
@@ -192,8 +193,8 @@ const QuoteGenerator = {
                 author: parsed.author || '',
                 context: parsed.context || '',
                 tag: parsed.tag || '#微光',
-                category: cat.category,
-                badge: cat.badge,
+                category: parsed.category || cat.category,
+                badge: parsed.badge || cat.badge,
                 isLLM: true
               })
             } catch (e) {
@@ -268,13 +269,13 @@ const QuoteRouter = {
 
   async preloadQuotes(appQuotes, count = 3) {
     if (!ApiConfig.isConfigured()) return
-    const cached = QuoteCache.getCache()
+    let cached = QuoteCache.getCache()
     if (cached.length >= count) return
 
     for (let i = 0; i < count - cached.length; i++) {
       try {
         const q = await QuoteGenerator.generate()
-        cached.push(q)
+        cached = [...cached, q]
       } catch (e) { break }
     }
     QuoteCache.saveCache(cached)

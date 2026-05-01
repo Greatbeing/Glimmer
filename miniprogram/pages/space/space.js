@@ -1,3 +1,5 @@
+const { ApiConfig, QuotaManager } = require('../../utils/quoteService')
+
 Page({
   data: {
     activeTab: 'caught',
@@ -24,18 +26,15 @@ Page({
 
   // API Settings
   loadApiConfig() {
-    try {
-      const config = wx.getStorageSync('glimmer_api_config') || {}
-      const quota = wx.getStorageSync('glimmer_quota') || { date: new Date().toISOString().slice(0,10), used: 0 }
-      const today = new Date().toISOString().slice(0,10)
-      
-      this.setData({
-        modelIndex: config.model === 'glm-4' ? 1 : config.model === 'ernie-bot' ? 2 : 0,
-        apiUrlInput: config.baseUrl || 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-        apiKeyInput: config.key ? '••••••••' : '',
-        quotaUsed: quota.date === today ? quota.used : 0
-      })
-    } catch(e) {}
+    const config = ApiConfig.load()
+    const quotaUsed = QuotaManager.getUsed()
+    
+    this.setData({
+      modelIndex: config.model === 'glm-4' ? 1 : config.model === 'ernie-bot' ? 2 : 0,
+      apiUrlInput: config.baseUrl || 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+      apiKeyInput: config.key ? '••••••••' : '',
+      quotaUsed
+    })
   },
 
   showApiSettings() {
@@ -99,8 +98,9 @@ Page({
         })
       })
 
-      wx.setStorageSync('glimmer_api_config', { key, model, baseUrl })
       wx.setStorageSync('glimmer_api_setup_done', '1')
+      // Sync with ApiConfig module to ensure in-memory state is updated
+      ApiConfig.save({ key, model, baseUrl })
       wx.showToast({ title: '验证成功', icon: 'success' })
       this.setData({ showSettings: false })
     } catch(e) {
