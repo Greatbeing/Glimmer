@@ -1379,7 +1379,155 @@ function renderQuote(direction) {
     philosophy: '哲学',
     psychology: '心理',
     counterintuitive: '反常识'
-  };
+};
+
+// ====== Quote Cache ======
+const quoteCache = {
+  cacheKey: 'glimmer_cache',
+  historyKey: 'glimmer_history',
+  maxCache: 50,
+  maxHistory: 200,
+  lowThreshold: 5,
+  preloadTrigger: 3,
+  
+  getCache() {
+    try {
+      return JSON.parse(localStorage.getItem(this.cacheKey)) || [];
+    } catch(e) {
+      return [];
+    }
+  },
+  
+  getHistory() {
+    try {
+      return JSON.parse(localStorage.getItem(this.historyKey)) || [];
+    } catch(e) {
+      return [];
+    }
+  },
+  
+  saveCache(cache) {
+    // Trim to max capacity
+    if (cache.length > this.maxCache) {
+      cache = cache.slice(0, this.maxCache);
+    }
+    localStorage.setItem(this.cacheKey, JSON.stringify(cache));
+  },
+  
+  saveHistory(history) {
+    if (history.length > this.maxHistory) {
+      history = history.slice(-this.maxHistory);
+    }
+    localStorage.setItem(this.historyKey, JSON.stringify(history));
+  },
+  
+  // Simple similarity check (based on exact match for now)
+  isDuplicate(quote) {
+    const history = this.getHistory();
+    return history.includes(quote.zh);
+  },
+  
+  async next() {
+    const cache = this.getCache();
+    if (cache.length === 0) return null;
+    
+    const entry = cache.shift();
+    this.saveCache(cache);
+    
+    // Record to history
+    const history = this.getHistory();
+    history.push(entry.zh);
+    this.saveHistory(history);
+    
+    // Trigger preload if needed
+    if (cache.length <= this.preloadTrigger) {
+      this.preload();
+    }
+    
+    return entry;
+  },
+  
+  add(quote) {
+    const cache = this.getCache();
+    cache.unshift(quote);
+    this.saveCache(cache);
+  },
+  
+  needsRefill() {
+    return this.getCache().length < this.lowThreshold;
+  },
+  
+  async preload() {
+    if (!apiConfig.isConfigured() || !quotaManager.canGenerate()) return;
+    
+    const currentSize = this.getCache().length;
+    const needed = this.lowThreshold + 2 - currentSize;
+    
+    if (needed <= 0) return;
+    
+    try {
+      const newQuotes = await quoteGenerator.batchGenerate(needed);
+      for (const q of newQuotes) {
+        if (!this.isDuplicate(q)) {
+          this.add(q);
+        }
+      }
+    } catch(e) {
+      console.warn('预加载失败:', e.message);
+    }
+  },
+  
+  clear() {
+    localStorage.removeItem(this.cacheKey);
+    localStorage.removeItem(this.historyKey);
+  }
+};
+
+// ====== Quote Router ======
+const quoteRouter = {
+  consecutiveFailures: 0,
+  cooldownUntil: 0,
+  
+  async getNextQuote() {
+    // Check cooldown
+    if (Date.now() < this.cooldownUntil) {
+      return this.getFallbackQuote();
+    }
+    
+    // Try cache first
+    const cached = await quoteCache.next();
+    if (cached) {
+      this.consecutiveFailures = 0;
+      return cached;
+    }
+    
+    // Try LLM generation
+    try {
+      const quote = await quoteGenerator.generate();
+      this.consecutiveFailures = 0;
+      return quote;
+    } catch(e) {
+      this.consecutiveFailures++;
+      
+      // Cooldown after 3 failures
+      if (this.consecutiveFailures >= 3) {
+        this.cooldownUntil = Date.now() + 30 * 60 * 1000; // 30 minutes
+      }
+      
+      return this.getFallbackQuote();
+    }
+  },
+  
+  getFallbackQuote() {
+    // Use preset quotes as fallback
+    currentIndex = (currentIndex + 1) % quotes.length;
+    currentQuote = quotes[currentIndex];
+    return {
+      ...currentQuote,
+      isLLM: false
+    };
+  }
+};
   const catText = categoryMap[q.category] || '';
   document.getElementById('quoteTag').innerHTML = catText ? `${q.tag} <span style="opacity:0.5;margin-left:4px;">· ${catText}</span>` : q.tag;
   document.getElementById('quoteTag').style.display = q.tag ? 'inline-block' : 'none';
@@ -1390,9 +1538,18 @@ function renderQuote(direction) {
   document.getElementById('likeBtn').classList.toggle('liked', liked);
   document.getElementById('catchBtn').classList.toggle('caught', store.isCaught(q.id));
 
-  // Dots
+  // Dots - limit to max 10 visible dots
   const dots = document.getElementById('quoteDots');
-  dots.innerHTML = quotes.map((_, i) => `<span class="${i === currentIndex ? 'active' : ''}"></span>`).join('');
+  const totalQuotes = quotes.length;
+  const maxDots = 10;
+  
+  if (totalQuotes <= maxDots) {
+    dots.innerHTML = quotes.map((_, i) => `<span class="${i === currentIndex ? 'active' : ''}"></span>`).join('');
+  } else {
+    // Show relative position
+    const progress = ((currentIndex + 1) / totalQuotes * 100).toFixed(0);
+    dots.innerHTML = `<span style="color: var(--text-muted); font-size: 12px;">${currentIndex + 1} / ${totalQuotes} (${progress}%)</span>`;
+  }
 
   // Comment area hidden
   document.getElementById('commentArea').classList.remove('show');
@@ -1400,19 +1557,36 @@ function renderQuote(direction) {
 }
 
 function showQuote(direction) {
-  currentQuote = quotes[currentIndex];
   stopMusic();
   renderQuote(direction);
 }
 
-function nextQuote() {
-  currentIndex = (currentIndex + 1) % quotes.length;
-  showQuote('next');
+async function nextQuote() {
+  // If we've gone through all preset quotes, switch to LLM mode
+  if (currentIndex >= quotes.length - 1 || currentQuote.isLLM) {
+    try {
+      const newQuote = await quoteRouter.getNextQuote();
+      currentQuote = newQuote;
+      // Add to quotes array for pagination dots
+      quotes.push(newQuote);
+      currentIndex = quotes.length - 1;
+      showQuote('next');
+    } catch(e) {
+      showToast('加载失败，稍后再试');
+    }
+  } else {
+    currentIndex = (currentIndex + 1) % quotes.length;
+    currentQuote = quotes[currentIndex];
+    showQuote('next');
+  }
 }
 
 function prevQuote() {
-  currentIndex = (currentIndex - 1 + quotes.length) % quotes.length;
-  showQuote('prev');
+  if (currentIndex > 0) {
+    currentIndex--;
+    currentQuote = quotes[currentIndex];
+    showQuote('prev');
+  }
 }
 
 function playMusic() {
@@ -1584,6 +1758,128 @@ const apiConfig = {
 };
 
 apiConfig.load();
+
+// ====== Quote Generator ======
+const quoteGenerator = {
+  categories: [
+    { name: '哲学', category: 'philosophy', badge: '哲思之光' },
+    { name: '心理学', category: 'psychology', badge: '心光' },
+    { name: '反常识', category: 'counterintuitive', badge: '逆光' },
+    { name: '励志', category: 'literature', badge: '晨曦之光' }
+  ],
+  
+  buildPrompt(category) {
+    return `请生成一条打动人心的语录，要求：
+- 类别: ${category.name}
+- 中文正文 20-50 字
+- 英文翻译准确流畅
+- 来源必须是真实存在的书籍/电影/演讲/名人名言
+- 背景说明 1-2 句话
+- 标签格式: #关键词
+- 必须且仅返回 JSON 格式，不要任何额外文字:
+{"zh":"", "en":"", "source":"", "author":"", "context":"", "tag":"", "category":"${category.category}", "badge":"${category.badge}"}`;
+  },
+  
+  async generate(category) {
+    if (!apiConfig.isConfigured()) {
+      throw new Error('API 未配置');
+    }
+    
+    if (!quotaManager.canGenerate()) {
+      throw new Error('今日额度已用尽');
+    }
+    
+    const cat = category || this.categories[Math.floor(Math.random() * this.categories.length)];
+    const prompt = this.buildPrompt(cat);
+    
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    
+    try {
+      const response = await fetch(apiConfig.baseUrl + '/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiConfig.key}`
+        },
+        body: JSON.stringify({
+          model: apiConfig.model,
+          messages: [
+            { role: 'system', content: '你是一个语录生成专家，擅长创作启发人心、打动人心的内容。' },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.8,
+          max_tokens: 500
+        }),
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeout);
+      
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error?.message || `API 错误: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      const content = data.choices[0].message.content;
+      
+      // Parse JSON from response
+      let quote;
+      try {
+        // Try to extract JSON from response (handles cases where LLM adds extra text)
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          quote = JSON.parse(jsonMatch[0]);
+        } else {
+          throw new Error('无法解析 JSON');
+        }
+      } catch(e) {
+        throw new Error(`返回格式错误: ${e.message}`);
+      }
+      
+      // Validate required fields
+      const required = ['zh', 'en', 'source', 'author', 'tag'];
+      for (const field of required) {
+        if (!quote[field]) {
+          throw new Error(`缺少字段: ${field}`);
+        }
+      }
+      
+      // Set additional fields
+      quote.id = 'llm-' + Date.now();
+      quote.generatedAt = Date.now();
+      quote.isLLM = true;
+      
+      // Record quota usage
+      quotaManager.record();
+      
+      return quote;
+      
+    } catch(e) {
+      clearTimeout(timeout);
+      if (e.name === 'AbortError') {
+        throw new Error('请求超时');
+      }
+      throw e;
+    }
+  },
+  
+  async batchGenerate(count) {
+    const results = [];
+    for (let i = 0; i < count; i++) {
+      try {
+        const quote = await this.generate();
+        results.push(quote);
+        // Add small delay between requests
+        await new Promise(r => setTimeout(r, 500));
+      } catch(e) {
+        console.warn('批量生成失败:', e.message);
+      }
+    }
+    return results;
+  }
+};
 
 // Quota Manager
 const quotaManager = {
