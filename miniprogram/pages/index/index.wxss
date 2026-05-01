@@ -1,0 +1,124 @@
+.container {
+  padding: 20px;
+  padding-bottom: 80px;
+  background: linear-gradient(180deg, #FFF9F5 0%, #FAFAFA 100%);
+}
+
+.header {
+  text-align: center;
+  padding: 20px 0 16px;
+}
+
+.logo {
+  display: block;
+  font-size: 28px;
+  font-weight: 800;
+  color: #FF7043;
+  letter-spacing: 2px;
+}
+
+.slogan {
+  font-size: 12px;
+  color: #9AA0A6;
+  margin-top: 4px;
+}
+
+.quote-card {
+  background: #fff;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06);
+}
+
+.quote-accent {
+  height: 6px;
+  background: linear-gradient(90deg, #FBE9E7, #FF7043, #FF8A65, #FBE9E7);
+}
+
+.quote-inner {
+  padding: 32px 24px 24px;
+}
+
+.quote-badge {
+  display: inline-block;
+  font-size: 12px;
+  color: #FF7043;
+  background: #FBE9E7;
+  padding: 6px 14px;
+  border-radius: 16px;
+  margin-bottom: 24px;
+  align-self: center;
+}
+
+.quote-text {
+  display: block;
+  font-size: 20px;
+  line-height: 1.9;
+  color: #1A1A1A;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.quote-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 16px;
+  border-top: 1px solid #F1F3F4;
+}
+
+.quote-source {
+  font-size: 13px;
+  color: #9AA0A6;
+}
+
+.music-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #FFF3E0;
+  border-radius: 16px;
+  font-size: 12px;
+  color: #FFB74D;
+}
+
+.music-btn.playing {
+  background: #FFB74D;
+  color: #fff;
+}
+
+.quote-actions {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #F1F3F4;
+}
+
+.action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  color: #9AA0A6;
+}
+
+.action-btn.liked { color: #FF4B5C; }
+.action-btn.caught { color: #FFB74D; }
+
+.action-btn .icon { font-size: 24px; }
+.action-btn .count { font-size: 12px; }
+
+.swipe-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-top: 20px;
+  color: #9AA0A6;
+}
+
+.swipe-hint .arrow { font-size: 18px; }
+.swipe-hint .text { font-size: 12px; }

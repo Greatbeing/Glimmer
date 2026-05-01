@@ -1,0 +1,35 @@
+<view class="container">
+  <view class="header">
+    <text class="logo">微光</text>
+    <text class="slogan">每日微光，照亮心房</text>
+  </view>
+
+  <view class="quote-card" bindtouchstart="onTouchStart" bindtouchend="onTouchEnd">
+    <view class="quote-accent"></view>
+    <view class="quote-inner">
+      <view class="quote-badge">📖 文学作品</view>
+      <text class="quote-text">{{currentQuote.content}}</text>
+      <view class="quote-footer">
+        <text class="quote-source">—— {{currentQuote.source}} / {{currentQuote.author}}</text>
+        <view class="music-btn {{isPlaying ? 'playing' : ''}}" bindtap="toggleMusic">
+          <text>{{isPlaying ? '♪♪ 播放中' : '♪ 播放'}}</text>
+        </view>
+      </view>
+      <view class="quote-actions">
+        <view class="action-btn {{isLiked ? 'liked' : ''}}" bindtap="toggleLike">
+          <text class="icon">♥</text>
+          <text class="count">{{likeCount}}</text>
+        </view>
+        <view class="action-btn {{isCaught ? 'caught' : ''}}" bindtap="catchQuote">
+          <text class="icon">✦</text>
+          <text class="count">捕捉</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="swipe-hint">
+    <text class="arrow">↑</text>
+    <text class="text">上滑查看下一条</text>
+  </view>
+</view>

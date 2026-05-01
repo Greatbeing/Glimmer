@@ -1,0 +1,60 @@
+<view class="container">
+  <view class="space-header">
+    <view class="space-avatar">☀</view>
+    <view class="user-info">
+      <text class="space-name">微光用户</text>
+      <text class="space-desc">记录生活，捕捉微光</text>
+    </view>
+  </view>
+
+  <view class="stats-bar">
+    <view class="stat-item">
+      <text class="stat-value">{{caughtCount}}</text>
+      <text class="stat-label">捕捉</text>
+    </view>
+    <view class="stat-item">
+      <text class="stat-value">{{postCount}}</text>
+      <text class="stat-label">发布</text>
+    </view>
+    <view class="stat-item">
+      <text class="stat-value">{{likeCount}}</text>
+      <text class="stat-label">获赞</text>
+    </view>
+  </view>
+
+  <view class="tabs">
+    <view class="tab-btn {{activeTab === 'caught' ? 'active' : ''}}" data-tab="caught" bindtap="switchTab">我的捕捉</view>
+    <view class="tab-btn {{activeTab === 'posts' ? 'active' : ''}}" data-tab="posts" bindtap="switchTab">我的发布</view>
+  </view>
+
+  <view class="tab-content">
+    <view class="tab-panel {{activeTab === 'caught' ? 'active' : ''}}">
+      <view class="caught-card" wx:for="{{caught}}" wx:key="id">
+        <text class="caught-text">{{item.content}}</text>
+        <text class="caught-source">—— {{item.source}}</text>
+        <view class="caught-remove" data-id="{{item.id}}" bindtap="removeCaught">✕</view>
+      </view>
+    </view>
+
+    <view class="tab-panel {{activeTab === 'posts' ? 'active' : ''}}">
+      <view class="post-card" wx:for="{{posts}}" wx:key="id">
+        <view class="post-header">
+          <text class="post-user">微光用户</text>
+          <text class="post-time">{{item.timeText}}</text>
+        </view>
+        <text class="post-mood" wx:if="{{item.mood}}">{{item.mood}}</text>
+        <text class="post-content">{{item.content}}</text>
+        <view class="post-footer">
+          <view class="post-action" data-id="{{item.id}}" bindtap="deletePost">
+            <text>删除</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty" wx:if="{{caught.length === 0 && posts.length === 0}}">
+    <text class="empty-icon">✦</text>
+    <text class="empty-text">暂无内容</text>
+  </view>
+</view>

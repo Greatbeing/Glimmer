@@ -1,0 +1,41 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/publish/publish",
+    "pages/space/space"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#FFFFFF",
+    "navigationBarTitleText": "微光",
+    "navigationBarTextStyle": "black"
+  },
+  "tabBar": {
+    "color": "#9AA0A6",
+    "selectedColor": "#FF7043",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "每日推荐",
+        "iconPath": "images/icon-home.png",
+        "selectedIconPath": "images/icon-home-active.png"
+      },
+      {
+        "pagePath": "pages/publish/publish",
+        "text": "今日发布",
+        "iconPath": "images/icon-publish.png",
+        "selectedIconPath": "images/icon-publish-active.png"
+      },
+      {
+        "pagePath": "pages/space/space",
+        "text": "我的空间",
+        "iconPath": "images/icon-space.png",
+        "selectedIconPath": "images/icon-space-active.png"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}
