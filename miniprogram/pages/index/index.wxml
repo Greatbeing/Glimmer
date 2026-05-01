@@ -5,14 +5,23 @@
       <text class="logo">Glimmer</text>
       <text class="slogan">每日微光，照亮心房</text>
     </view>
-    <view class="header-bulb">
-      <text class="header-bulb-icon">💡</text>
+    <view class="header-right">
+      <view class="settings-btn" wx:if="{{showApiIcon}}" bindtap="goToSettings">⚙</view>
+      <view class="header-bulb">
+        <text class="header-bulb-icon">💡</text>
+      </view>
     </view>
   </view>
 
   <!-- Quote Card -->
-  <view class="quote-card" bindtouchstart="onTouchStart" bindtouchmove="onTouchMove" bindtouchend="onTouchEnd">
+  <view class="quote-card {{isLoading ? 'loading' : ''}}" bindtouchstart="onTouchStart" bindtouchmove="onTouchMove" bindtouchend="onTouchEnd">
     <view class="quote-inner">
+      <!-- Loading Overlay -->
+      <view class="loading-overlay" wx:if="{{isLoading}}">
+        <view class="loading-spinner"></view>
+        <text class="loading-text">{{loadingText}}</text>
+      </view>
+
       <!-- Badge -->
       <view class="quote-badge">
         <text class="badge-icon">☀</text>

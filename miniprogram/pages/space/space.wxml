@@ -5,6 +5,7 @@
       <text class="space-name">微光用户</text>
       <text class="space-desc">记录生活，捕捉微光</text>
     </view>
+    <view class="settings-icon" bindtap="showApiSettings">⚙</view>
   </view>
 
   <view class="stats-bar">
@@ -63,6 +64,41 @@
         <text class="empty-icon">📝</text>
         <text class="empty-text">暂无发布</text>
       </view>
+    </view>
+  </view>
+
+  <!-- API Settings Modal -->
+  <view class="settings-mask {{showSettings ? 'show' : ''}}" bindtap="hideSettings"></view>
+  <view class="settings-modal {{showSettings ? 'show' : ''}}">
+    <view class="settings-title">⚙ API 设置</view>
+    
+    <view class="settings-group">
+      <text class="settings-label">API Key</text>
+      <input class="settings-input" type="text" password="{{!showKey}}" placeholder="请输入你的 API Key" value="{{apiKeyInput}}" bindinput="onApiKeyInput" />
+      <text class="settings-hint">你的 API Key 仅存储在本地</text>
+    </view>
+    
+    <view class="settings-group">
+      <text class="settings-label">AI 模型</text>
+      <picker mode="selector" range="{{modelOptions}}" value="{{modelIndex}}" bindchange="onModelChange">
+        <view class="settings-picker">{{modelOptions[modelIndex]}} ▾</view>
+      </picker>
+    </view>
+    
+    <view class="settings-group">
+      <text class="settings-label">API 地址</text>
+      <input class="settings-input" type="text" placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1" value="{{apiUrlInput}}" bindinput="onApiUrlInput" />
+      <text class="settings-hint">OpenAI 兼容格式的 API 地址</text>
+    </view>
+    
+    <view class="settings-quota">
+      <text class="settings-quota-label">今日 LLM 调用</text>
+      <text class="settings-quota-value">{{quotaUsed}} / 100</text>
+    </view>
+    
+    <view class="settings-actions">
+      <button class="settings-btn secondary" bindtap="hideSettings">取消</button>
+      <button class="settings-btn primary" bindtap="saveApiConfig" loading="{{saving}}">保存并验证</button>
     </view>
   </view>
 </view>

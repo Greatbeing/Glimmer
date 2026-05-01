@@ -1379,7 +1379,35 @@ function renderQuote(direction) {
     philosophy: '哲学',
     psychology: '心理',
     counterintuitive: '反常识'
-};
+  };
+
+  const catText = categoryMap[q.category] || '';
+  document.getElementById('quoteTag').innerHTML = catText ? `${q.tag} <span style="opacity:0.5;margin-left:4px;">· ${catText}</span>` : q.tag;
+  document.getElementById('quoteTag').style.display = q.tag ? 'inline-block' : 'none';
+  document.getElementById('badgeText').textContent = q.badge || '晨曦之光';
+  document.getElementById('likeCount').textContent = Math.floor(Math.random() * 300) + 50;
+
+  const liked = store.isLikedQuote(q.id);
+  document.getElementById('likeBtn').classList.toggle('liked', liked);
+  document.getElementById('catchBtn').classList.toggle('caught', store.isCaught(q.id));
+
+  // Dots - limit to max 10 visible dots
+  const dots = document.getElementById('quoteDots');
+  const totalQuotes = quotes.length;
+  const maxDots = 10;
+  
+  if (totalQuotes <= maxDots) {
+    dots.innerHTML = quotes.map((_, i) => `<span class="${i === currentIndex ? 'active' : ''}"></span>`).join('');
+  } else {
+    // Show relative position
+    const progress = ((currentIndex + 1) / totalQuotes * 100).toFixed(0);
+    dots.innerHTML = `<span style="color: var(--text-muted); font-size: 12px;">${currentIndex + 1} / ${totalQuotes} (${progress}%)</span>`;
+  }
+
+  // Comment area hidden
+  document.getElementById('commentArea').classList.remove('show');
+  document.getElementById('commentCount').textContent = '0';
+}
 
 // ====== Quote Cache ======
 const quoteCache = {
@@ -1528,33 +1556,6 @@ const quoteRouter = {
     };
   }
 };
-  const catText = categoryMap[q.category] || '';
-  document.getElementById('quoteTag').innerHTML = catText ? `${q.tag} <span style="opacity:0.5;margin-left:4px;">· ${catText}</span>` : q.tag;
-  document.getElementById('quoteTag').style.display = q.tag ? 'inline-block' : 'none';
-  document.getElementById('badgeText').textContent = q.badge || '晨曦之光';
-  document.getElementById('likeCount').textContent = Math.floor(Math.random() * 300) + 50;
-
-  const liked = store.isLikedQuote(q.id);
-  document.getElementById('likeBtn').classList.toggle('liked', liked);
-  document.getElementById('catchBtn').classList.toggle('caught', store.isCaught(q.id));
-
-  // Dots - limit to max 10 visible dots
-  const dots = document.getElementById('quoteDots');
-  const totalQuotes = quotes.length;
-  const maxDots = 10;
-  
-  if (totalQuotes <= maxDots) {
-    dots.innerHTML = quotes.map((_, i) => `<span class="${i === currentIndex ? 'active' : ''}"></span>`).join('');
-  } else {
-    // Show relative position
-    const progress = ((currentIndex + 1) / totalQuotes * 100).toFixed(0);
-    dots.innerHTML = `<span style="color: var(--text-muted); font-size: 12px;">${currentIndex + 1} / ${totalQuotes} (${progress}%)</span>`;
-  }
-
-  // Comment area hidden
-  document.getElementById('commentArea').classList.remove('show');
-  document.getElementById('commentCount').textContent = '0';
-}
 
 function showQuote(direction) {
   stopMusic();
@@ -1724,6 +1725,8 @@ function togglePostLike(id) {
 
 // Init
 store.init();
+currentQuote = quotes[0];
+currentIndex = 0;
 showQuote();
 
 // ====== API Settings ======

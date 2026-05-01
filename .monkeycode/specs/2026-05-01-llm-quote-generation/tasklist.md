@@ -53,15 +53,15 @@
 ## Task 4: 小程序端适配
 
 ### 4.1 小程序 API Key 设置
-- [ ] 在"我的空间"页添加 API 设置入口
-- [ ] 实现小程序端 Key 存储（wx.setStorageSync）
-- [ ] 适配小程序网络请求（wx.request）
+- [x] 在"我的空间"页添加 API 设置入口
+- [x] 实现小程序端 Key 存储（wx.setStorageSync）
+- [x] 适配小程序网络请求（wx.request）
 
 ### 4.2 核心模块移植
-- [ ] 移植 QuoteGenerator（使用 wx.request）
-- [ ] 移植 QuoteCache
-- [ ] 移植 QuotaManager
-- [ ] 集成到小程序滑动逻辑
+- [x] 移植 QuoteGenerator（使用 wx.request）
+- [x] 移植 QuoteCache
+- [x] 移植 QuotaManager
+- [x] 集成到小程序滑动逻辑
 
 ## Task 5: 测试与优化
 
