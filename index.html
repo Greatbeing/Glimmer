@@ -781,6 +781,244 @@
       from { transform: translateX(-100%); opacity: 0; }
       to { transform: translateX(0); opacity: 1; }
     }
+
+    /* ====== Header Actions ====== */
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header-bulb {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(251, 191, 36, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .header-bulb svg {
+      width: 16px;
+      height: 16px;
+      fill: var(--amber-300);
+    }
+
+    .header-settings {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .header-settings:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .header-settings svg {
+      width: 16px;
+      height: 16px;
+      fill: var(--amber-300);
+    }
+
+    /* ====== Settings Panel ====== */
+    .settings-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 100;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .settings-overlay.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .settings-panel {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.95);
+      width: 90%;
+      max-width: 400px;
+      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 20px;
+      padding: 28px;
+      z-index: 101;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+    }
+
+    .settings-panel.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .settings-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--amber-100);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .settings-title svg {
+      width: 20px;
+      height: 20px;
+      fill: var(--amber-400);
+    }
+
+    .settings-group {
+      margin-bottom: 20px;
+    }
+
+    .settings-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .settings-input {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 14px;
+      color: var(--text-primary);
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    .settings-input:focus {
+      border-color: rgba(245, 158, 11, 0.5);
+    }
+
+    .settings-input::placeholder {
+      color: var(--text-muted);
+      opacity: 0.6;
+    }
+
+    .settings-select {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 14px;
+      color: var(--text-primary);
+      outline: none;
+      appearance: none;
+      cursor: pointer;
+      transition: border-color 0.2s ease;
+    }
+
+    .settings-select:focus {
+      border-color: rgba(245, 158, 11, 0.5);
+    }
+
+    .settings-select option {
+      background: #1e1b4b;
+      color: var(--text-primary);
+    }
+
+    .settings-hint {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+
+    .settings-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      margin-top: 8px;
+    }
+
+    .settings-status.success { color: #4ade80; }
+    .settings-status.error { color: #f87171; }
+    .settings-status.checking { color: var(--amber-400); }
+
+    .settings-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .settings-btn {
+      flex: 1;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: none;
+    }
+
+    .settings-btn.primary {
+      background: var(--amber-500);
+      color: white;
+    }
+
+    .settings-btn.primary:hover {
+      background: var(--amber-600);
+    }
+
+    .settings-btn.secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-secondary);
+    }
+
+    .settings-btn.secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .settings-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .settings-quota {
+      margin-top: 16px;
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .settings-quota-label {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .settings-quota-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--amber-400);
+    }
   </style>
 </head>
 <body>
@@ -791,8 +1029,13 @@
         <h1>微光</h1>
         <p>每日微光，照亮心房</p>
       </div>
-      <div class="header-bulb">
-        <svg viewBox="0 0 384 512"><path d="M292.9 384c7.3-22.3 21.9-42.5 38.4-59.9 32.7-34.4 52.7-80.9 52.7-132.1 0-106-86-192-192-192S0 86 0 192c0 51.2 20 97.7 52.7 132.1 16.5 17.4 31.2 37.6 38.4 59.9l201.7 0zM288 432l-192 0 0 16c0 44.2 35.8 80 80 80l32 0c44.2 0 80-35.8 80-80l0-16zM184 112c-39.8 0-72 32.2-72 72 0 13.3-10.7 24-24 24s-24-10.7-24-24c0-66.3 53.7-120 120-120 13.3 0 24 10.7 24 24s-10.7 24-24 24z"/></svg>
+      <div class="header-actions">
+        <div class="header-bulb">
+          <svg viewBox="0 0 384 512"><path d="M292.9 384c7.3-22.3 21.9-42.5 38.4-59.9 32.7-34.4 52.7-80.9 52.7-132.1 0-106-86-192-192-192S0 86 0 192c0 51.2 20 97.7 52.7 132.1 16.5 17.4 31.2 37.6 38.4 59.9l201.7 0zM288 432l-192 0 0 16c0 44.2 35.8 80 80 80l32 0c44.2 0 80-35.8 80-80l0-16zM184 112c-39.8 0-72 32.2-72 72 0 13.3-10.7 24-24 24s-24-10.7-24-24c0-66.3 53.7-120 120-120 13.3 0 24 10.7 24 24s-10.7 24-24 24z"/></svg>
+        </div>
+        <button class="header-settings" id="settingsBtn" title="API 设置">
+          <svg viewBox="0 0 512 512"><path d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z"/></svg>
+        </button>
       </div>
     </header>
 
@@ -923,6 +1166,51 @@
 
     <!-- Toast -->
     <div id="toast-container"></div>
+
+    <!-- Settings Overlay -->
+    <div class="settings-overlay" id="settingsOverlay"></div>
+    
+    <!-- Settings Panel -->
+    <div class="settings-panel" id="settingsPanel">
+      <div class="settings-title">
+        <svg viewBox="0 0 512 512"><path d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z"/></svg>
+        API 设置
+      </div>
+      
+      <div class="settings-group">
+        <label class="settings-label">API Key</label>
+        <input type="password" class="settings-input" id="apiKeyInput" placeholder="请输入你的 API Key">
+        <div class="settings-hint">你的 API Key 仅存储在本地浏览器中，不会上传到任何服务器</div>
+      </div>
+      
+      <div class="settings-group">
+        <label class="settings-label">AI 模型</label>
+        <select class="settings-select" id="modelSelect">
+          <option value="qwen-turbo">通义千问 (qwen-turbo) - 推荐</option>
+          <option value="glm-4">智谱清言 (glm-4)</option>
+          <option value="ernie-bot">文心一言 (ernie-bot)</option>
+        </select>
+        <div class="settings-hint">不同模型的 API 地址和计费方式不同</div>
+      </div>
+      
+      <div class="settings-group">
+        <label class="settings-label">API 地址</label>
+        <input type="text" class="settings-input" id="apiUrlInput" placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1">
+        <div class="settings-hint">OpenAI 兼容格式的 API 地址</div>
+      </div>
+      
+      <div id="apiStatus" class="settings-status" style="display:none;"></div>
+      
+      <div class="settings-quota">
+        <span class="settings-quota-label">今日 LLM 调用</span>
+        <span class="settings-quota-value" id="quotaDisplay">0 / 100</span>
+      </div>
+      
+      <div class="settings-actions">
+        <button class="settings-btn secondary" id="settingsCancel">取消</button>
+        <button class="settings-btn primary" id="settingsSave">保存并验证</button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -1263,6 +1551,163 @@ function togglePostLike(id) {
 // Init
 store.init();
 showQuote();
+
+// ====== API Settings ======
+const apiConfig = {
+  key: null,
+  model: 'qwen-turbo',
+  baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+  
+  load() {
+    try {
+      const raw = localStorage.getItem('glimmer_api_config');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        this.key = parsed.key || null;
+        this.model = parsed.model || 'qwen-turbo';
+        this.baseUrl = parsed.baseUrl || 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+      }
+    } catch(e) {}
+  },
+  
+  save() {
+    localStorage.setItem('glimmer_api_config', JSON.stringify({
+      key: this.key,
+      model: this.model,
+      baseUrl: this.baseUrl
+    }));
+  },
+  
+  isConfigured() {
+    return !!this.key && this.key.length > 10;
+  }
+};
+
+apiConfig.load();
+
+// Quota Manager
+const quotaManager = {
+  key: 'glimmer_quota',
+  limit: 100,
+  
+  get() {
+    try {
+      const raw = localStorage.getItem(this.key);
+      if (raw) {
+        const data = JSON.parse(raw);
+        const today = new Date().toISOString().slice(0, 10);
+        if (data.date === today) return data;
+      }
+    } catch(e) {}
+    return { date: new Date().toISOString().slice(0, 10), used: 0, limit: this.limit };
+  },
+  
+  record() {
+    const data = this.get();
+    data.used++;
+    localStorage.setItem(this.key, JSON.stringify(data));
+    return data;
+  },
+  
+  canGenerate() {
+    return this.get().used < this.limit;
+  },
+  
+  getRemaining() {
+    return Math.max(0, this.limit - this.get().used);
+  }
+};
+
+// Settings Panel
+const settingsPanel = {
+  overlay: document.getElementById('settingsOverlay'),
+  panel: document.getElementById('settingsPanel'),
+  apiKeyInput: document.getElementById('apiKeyInput'),
+  modelSelect: document.getElementById('modelSelect'),
+  apiUrlInput: document.getElementById('apiUrlInput'),
+  statusEl: document.getElementById('apiStatus'),
+  quotaDisplay: document.getElementById('quotaDisplay'),
+  
+  show() {
+    this.apiKeyInput.value = apiConfig.key ? '••••••••' : '';
+    this.modelSelect.value = apiConfig.model;
+    this.apiUrlInput.value = apiConfig.baseUrl;
+    this.quotaDisplay.textContent = `${quotaManager.get().used} / ${quotaManager.limit}`;
+    this.statusEl.style.display = 'none';
+    this.overlay.classList.add('show');
+    this.panel.classList.add('show');
+  },
+  
+  hide() {
+    this.overlay.classList.remove('show');
+    this.panel.classList.remove('show');
+  },
+  
+  showStatus(type, msg) {
+    this.statusEl.className = `settings-status ${type}`;
+    this.statusEl.textContent = msg;
+    this.statusEl.style.display = 'flex';
+  }
+};
+
+// Settings Events
+document.getElementById('settingsBtn').addEventListener('click', () => settingsPanel.show());
+document.getElementById('settingsOverlay').addEventListener('click', () => settingsPanel.hide());
+document.getElementById('settingsCancel').addEventListener('click', () => settingsPanel.hide());
+
+document.getElementById('settingsSave').addEventListener('click', async () => {
+  const key = settingsPanel.apiKeyInput.value.trim();
+  const model = settingsPanel.modelSelect.value;
+  const baseUrl = settingsPanel.apiUrlInput.value.trim();
+  
+  if (!key || key.length < 10) {
+    settingsPanel.showStatus('error', '请输入有效的 API Key');
+    return;
+  }
+  
+  const realKey = key === '••••••••' ? apiConfig.key : key;
+  
+  settingsPanel.showStatus('checking', '正在验证 API Key...');
+  
+  try {
+    const response = await fetch(baseUrl + '/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${realKey}`
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: [{ role: 'user', content: '你好' }],
+        max_tokens: 10
+      })
+    });
+    
+    if (response.ok) {
+      apiConfig.key = realKey;
+      apiConfig.model = model;
+      apiConfig.baseUrl = baseUrl;
+      apiConfig.save();
+      settingsPanel.showStatus('success', '✓ API Key 验证成功，已保存');
+      settingsPanel.quotaDisplay.textContent = `${quotaManager.get().used} / ${quotaManager.limit}`;
+      localStorage.setItem('glimmer_api_setup_done', '1');
+      setTimeout(() => settingsPanel.hide(), 1000);
+    } else {
+      const err = await response.json();
+      settingsPanel.showStatus('error', `验证失败: ${err.error?.message || response.statusText}`);
+    }
+  } catch(e) {
+    settingsPanel.showStatus('error', `连接失败: ${e.message}`);
+  }
+});
+
+// First-time setup guide
+if (!apiConfig.isConfigured() && !localStorage.getItem('glimmer_api_setup_done')) {
+  setTimeout(() => {
+    settingsPanel.show();
+    settingsPanel.showStatus('checking', '首次使用，请配置你的 API Key 以解锁无限语录功能');
+  }, 1500);
+}
 
 // Nav
 document.querySelectorAll('.nav-btn').forEach(btn => {
