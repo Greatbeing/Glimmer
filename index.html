@@ -2093,7 +2093,7 @@ card.addEventListener('touchmove', e => {
   card.style.opacity = 1 - Math.abs(move) / 120;
 }, { passive: true });
 
-card.addEventListener('touchend', e => {
+card.addEventListener('touchend', async e => {
   if (!isDragging) return;
   isDragging = false;
   card.style.transition = '';
@@ -2101,7 +2101,15 @@ card.addEventListener('touchend', e => {
   card.style.opacity = '';
   const diff = startY - e.changedTouches[0].clientY;
   if (Math.abs(diff) > 40) {
-    diff > 0 ? nextQuote() : prevQuote();
+    if (diff > 0) {
+      // Show loading state
+      const hint = document.querySelector('.swipe-hint .text');
+      if (hint) hint.textContent = '正在寻找下一条微光...';
+      await nextQuote();
+      if (hint) hint.textContent = '上滑查看下一条';
+    } else {
+      prevQuote();
+    }
   }
 });
   </script>
