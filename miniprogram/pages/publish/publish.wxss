@@ -1,31 +1,36 @@
 .container {
-  padding: 20px;
+  padding: 16px;
   padding-bottom: 80px;
+  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%);
+  min-height: 100vh;
 }
 
 .publish-card {
-  background: #fff;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1rpx solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
-  padding: 18px;
-  margin-bottom: 18px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
 }
 
 .publish-textarea {
   width: 100%;
-  min-height: 100px;
-  border: 1px solid #F1F3F4;
+  min-height: 120px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1rpx solid rgba(255,255,255,0.1);
   border-radius: 8px;
-  padding: 14px;
+  padding: 12px;
   font-size: 15px;
   line-height: 1.7;
+  color: #f3f4f6;
 }
 
 .publish-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 14px;
+  margin-top: 12px;
 }
 
 .mood-tags {
@@ -35,88 +40,93 @@
 }
 
 .mood-tag {
-  padding: 7px 14px;
-  background: #FAFAFA;
-  border: 1px solid #F1F3F4;
-  border-radius: 18px;
+  padding: 6px 12px;
+  background: rgba(255,255,255,0.05);
+  border: 1rpx solid rgba(255,255,255,0.1);
+  border-radius: 999px;
   font-size: 12px;
-  color: #5F6368;
+  color: #d1d5db;
 }
 
 .mood-tag.active {
-  background: #FF7043;
-  border-color: #FF7043;
+  background: #f59e0b;
+  border-color: #f59e0b;
   color: #fff;
 }
 
 .publish-btn {
-  padding: 10px 24px;
-  background: linear-gradient(135deg, #FF7043, #F4511E);
+  padding: 8px 20px;
+  background: #f59e0b;
   color: #fff;
   border: none;
-  border-radius: 20px;
+  border-radius: 999px;
   font-size: 14px;
   font-weight: 600;
 }
 
-.posts-list { display: flex; flex-direction: column; gap: 14px; }
+.posts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 
 .post-card {
-  background: #fff;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1rpx solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
-  padding: 18px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  padding: 16px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
 }
 
 .post-header {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
-.post-user { font-size: 14px; font-weight: 600; }
-.post-time { font-size: 12px; color: #9AA0A6; }
+.post-user { font-size: 14px; font-weight: 600; color: #fef3c7; }
+.post-time { font-size: 12px; color: #9ca3af; }
 
 .post-mood {
   display: inline-block;
   font-size: 11px;
-  color: #FF7043;
-  background: #FBE9E7;
-  padding: 3px 10px;
-  border-radius: 12px;
+  color: #fde68a;
+  background: rgba(245, 158, 11, 0.15);
+  padding: 2px 8px;
+  border-radius: 999px;
   margin-bottom: 8px;
 }
 
 .post-content {
   display: block;
   font-size: 15px;
-  line-height: 1.75;
-  color: #5F6368;
+  line-height: 1.7;
+  color: #d1d5db;
 }
 
 .post-footer {
   display: flex;
-  gap: 20px;
-  margin-top: 14px;
+  gap: 16px;
+  margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #F1F3F4;
+  border-top: 1rpx solid rgba(255,255,255,0.1);
 }
 
 .post-action {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   font-size: 13px;
-  color: #9AA0A6;
+  color: #9ca3af;
 }
 
-.post-action.liked { color: #FF4B5C; }
+.post-action.liked { color: #f87171; }
 
 .empty {
   text-align: center;
-  padding: 56px 20px;
-  color: #9AA0A6;
+  padding: 48px 20px;
+  color: #9ca3af;
 }
 
-.empty-icon { font-size: 52px; display: block; margin-bottom: 14px; opacity: 0.4; }
+.empty-icon { font-size: 48px; display: block; margin-bottom: 12px; opacity: 0.4; }
 .empty-text { font-size: 14px; }

@@ -28,16 +28,22 @@
   </view>
 
   <view class="tab-content">
+    <!-- Caught Quotes -->
     <view class="tab-panel {{activeTab === 'caught' ? 'active' : ''}}">
-      <view class="caught-card" wx:for="{{caught}}" wx:key="id">
-        <text class="caught-text">{{item.content}}</text>
-        <text class="caught-source">—— {{item.source}}</text>
+      <view class="caught-card" wx:for="{{caught}}" wx:key="id" wx:if="{{caught.length > 0}}">
+        <text class="caught-text">{{item.zh || item.content}}</text>
+        <text class="caught-source">——《{{item.source}}》</text>
         <view class="caught-remove" data-id="{{item.id}}" bindtap="removeCaught">✕</view>
+      </view>
+      <view class="empty" wx:if="{{caught.length === 0}}">
+        <text class="empty-icon">✦</text>
+        <text class="empty-text">暂无捕捉</text>
       </view>
     </view>
 
+    <!-- Posts -->
     <view class="tab-panel {{activeTab === 'posts' ? 'active' : ''}}">
-      <view class="post-card" wx:for="{{posts}}" wx:key="id">
+      <view class="post-card" wx:for="{{posts}}" wx:key="id" wx:if="{{posts.length > 0}}">
         <view class="post-header">
           <text class="post-user">微光用户</text>
           <text class="post-time">{{item.timeText}}</text>
@@ -45,16 +51,18 @@
         <text class="post-mood" wx:if="{{item.mood}}">{{item.mood}}</text>
         <text class="post-content">{{item.content}}</text>
         <view class="post-footer">
+          <view class="post-action {{item.liked ? 'liked' : ''}}" data-id="{{item.id}}" bindtap="toggleLike">
+            <text>♥ {{item.likes}}</text>
+          </view>
           <view class="post-action" data-id="{{item.id}}" bindtap="deletePost">
             <text>删除</text>
           </view>
         </view>
       </view>
+      <view class="empty" wx:if="{{posts.length === 0}}">
+        <text class="empty-icon">📝</text>
+        <text class="empty-text">暂无发布</text>
+      </view>
     </view>
-  </view>
-
-  <view class="empty" wx:if="{{caught.length === 0 && posts.length === 0}}">
-    <text class="empty-icon">✦</text>
-    <text class="empty-text">暂无内容</text>
   </view>
 </view>

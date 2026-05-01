@@ -1,9 +1,19 @@
 page {
-  background-color: #FAFAFA;
+  background-color: #0f172a;
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
+  color: #f3f4f6;
 }
 
 .container {
-  padding: 20px;
+  padding: 16px;
   padding-bottom: 80px;
+  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%);
+  min-height: 100vh;
+}
+
+/* Glass Card */
+.glass-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1rpx solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
 }

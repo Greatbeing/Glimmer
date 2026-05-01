@@ -1,35 +1,58 @@
 <view class="container">
+  <!-- Header -->
   <view class="header">
-    <text class="logo">微光</text>
-    <text class="slogan">每日微光，照亮心房</text>
+    <view class="header-title">
+      <text class="logo">微光</text>
+      <text class="slogan">每日微光，照亮心房</text>
+    </view>
+    <view class="header-bulb">
+      <text class="header-bulb-icon">💡</text>
+    </view>
   </view>
 
-  <view class="quote-card" bindtouchstart="onTouchStart" bindtouchend="onTouchEnd">
-    <view class="quote-accent"></view>
+  <!-- Quote Card -->
+  <view class="quote-card" bindtouchstart="onTouchStart" bindtouchmove="onTouchMove" bindtouchend="onTouchEnd">
     <view class="quote-inner">
-      <view class="quote-badge">📖 文学作品</view>
-      <text class="quote-text">{{currentQuote.content}}</text>
-      <view class="quote-footer">
-        <text class="quote-source">—— {{currentQuote.source}} / {{currentQuote.author}}</text>
-        <view class="music-btn {{isPlaying ? 'playing' : ''}}" bindtap="toggleMusic">
-          <text>{{isPlaying ? '♪♪ 播放中' : '♪ 播放'}}</text>
+      <!-- Badge -->
+      <view class="quote-badge">
+        <text class="badge-icon">☀</text>
+        <text class="badge-text">{{currentQuote.badge || '晨曦之光'}}</text>
+        <view class="wave">
+          <view class="wave-bar"></view>
+          <view class="wave-bar"></view>
+          <view class="wave-bar"></view>
         </view>
       </view>
+
+      <!-- Content -->
+      <text class="quote-zh">"{{currentQuote.zh}}"</text>
+      <text class="quote-en" wx:if="{{currentQuote.en}}">{{currentQuote.en}}</text>
+      <text class="quote-source">——《{{currentQuote.source}}》</text>
+      <text class="quote-context" wx:if="{{currentQuote.context}}">{{currentQuote.context}}</text>
+      <text class="quote-tag" wx:if="{{currentQuote.tag}}">{{currentQuote.tag}}</text>
+
+      <!-- Actions -->
       <view class="quote-actions">
-        <view class="action-btn {{isLiked ? 'liked' : ''}}" bindtap="toggleLike">
-          <text class="icon">♥</text>
-          <text class="count">{{likeCount}}</text>
+        <view class="actions-left">
+          <view class="action-btn {{isLiked ? 'liked' : ''}}" bindtap="toggleLike">
+            <text class="action-icon">♥</text>
+            <text class="action-count">{{likeCount}}</text>
+          </view>
+          <view class="action-btn" bindtap="toggleComment">
+            <text class="action-icon">💬</text>
+            <text class="action-count">0</text>
+          </view>
         </view>
-        <view class="action-btn {{isCaught ? 'caught' : ''}}" bindtap="catchQuote">
-          <text class="icon">✦</text>
-          <text class="count">捕捉</text>
+        <view class="capture-btn {{isCaught ? 'caught' : ''}}" bindtap="catchQuote">
+          <text class="capture-icon">📷</text>
+          <text>捕捉微光</text>
         </view>
       </view>
     </view>
   </view>
 
-  <view class="swipe-hint">
-    <text class="arrow">↑</text>
-    <text class="text">上滑查看下一条</text>
+  <!-- Pagination Dots -->
+  <view class="quote-dots">
+    <view class="dot {{index === currentIndex ? 'active' : ''}}" wx:for="{{dots}}" wx:key="index"></view>
   </view>
 </view>

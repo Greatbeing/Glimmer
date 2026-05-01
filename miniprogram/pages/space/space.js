@@ -14,9 +14,9 @@ Page({
 
   getStore() {
     try {
-      return wx.getStorageSync('wg_data') || { caughtQuotes: [], posts: [], likedPosts: [] }
+      return wx.getStorageSync('wg_data') || { caughtQuotes: [], posts: [], likedQuotes: [], likedPosts: [] }
     } catch(e) {
-      return { caughtQuotes: [], posts: [], likedPosts: [] }
+      return { caughtQuotes: [], posts: [], likedQuotes: [], likedPosts: [] }
     }
   },
 
@@ -26,8 +26,13 @@ Page({
 
   loadData() {
     const store = this.getStore()
-    const posts = store.posts.map(p => ({ ...p, timeText: this.formatTime(p.time) }))
-    
+    const likedPosts = store.likedPosts || []
+    const posts = store.posts.map(p => ({
+      ...p,
+      timeText: this.formatTime(p.time),
+      liked: likedPosts.includes(p.id)
+    }))
+
     this.setData({
       caught: store.caughtQuotes,
       posts: posts,
@@ -39,6 +44,25 @@ Page({
 
   switchTab(e) {
     this.setData({ activeTab: e.currentTarget.dataset.tab })
+  },
+
+  toggleLike(e) {
+    const store = this.getStore()
+    if (!store.likedPosts) store.likedPosts = []
+    const id = e.currentTarget.dataset.id
+    const post = store.posts.find(p => p.id === id)
+    const idx = store.likedPosts.indexOf(id)
+
+    if (idx === -1) {
+      store.likedPosts.push(id)
+      if (post) post.likes = (post.likes || 0) + 1
+    } else {
+      store.likedPosts.splice(idx, 1)
+      if (post) post.likes = Math.max(0, (post.likes || 0) - 1)
+    }
+
+    this.saveStore(store)
+    this.loadData()
   },
 
   removeCaught(e) {
@@ -63,6 +87,7 @@ Page({
         if (res.confirm) {
           const store = this.getStore()
           store.posts = store.posts.filter(p => p.id !== e.currentTarget.dataset.id)
+          store.likedPosts = (store.likedPosts || []).filter(id => id !== e.currentTarget.dataset.id)
           this.saveStore(store)
           this.loadData()
           wx.showToast({ title: '已删除' })
