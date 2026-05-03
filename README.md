@@ -23,7 +23,16 @@ https://greatbeing.github.io/Glimmer/
 
 ### Android APK 下载
 
-直接下载并安装: [Glimmer-v1.0-debug.apk](https://github.com/Greatbeing/Glimmer/blob/main/Glimmer-v1.0-debug.apk)
+APK 文件可通过以下方式获取:
+
+**方式 1: 本地构建**
+```bash
+cd android && ./gradlew assembleDebug
+```
+构建完成后，APK 位于 `android/app/build/outputs/apk/debug/app-debug.apk`
+
+**方式 2: GitHub Releases** (推荐)
+访问 [Releases 页面](https://github.com/Greatbeing/Glimmer/releases) 下载最新版本。
 
 **安装步骤**:
 1. 在 Android 手机浏览器中打开上述链接
