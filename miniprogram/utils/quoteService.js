@@ -2,20 +2,46 @@
 const API_CONFIG_KEY = 'glimmer_api_config'
 const QUOTA_KEY = 'glimmer_quota'
 
+// Simple obfuscation for API key (not encryption, but prevents casual reading)
+const KeyCipher = {
+  encode(str) {
+    if (!str) return null
+    try {
+      const reversed = str.split('').reverse().join('')
+      return 'enc:' + btoa(encodeURIComponent(reversed))
+    } catch(e) { return str }
+  },
+  decode(str) {
+    if (!str || !str.startsWith('enc:')) return str
+    try {
+      const decoded = decodeURIComponent(atob(str.slice(4)))
+      return decoded.split('').reverse().join('')
+    } catch(e) { return str.slice(4) }
+  }
+}
+
 const ApiConfig = {
   data: { key: null, model: 'qwen-turbo', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1' },
 
   load() {
     try {
       const raw = wx.getStorageSync(API_CONFIG_KEY)
-      if (raw) this.data = JSON.parse(raw)
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        // Decode key if obfuscated
+        if (parsed.key) parsed.key = KeyCipher.decode(parsed.key)
+        this.data = { ...this.data, ...parsed }
+      }
     } catch (e) {}
     return this.data
   },
 
   save(config) {
     this.data = { ...this.data, ...config }
-    wx.setStorageSync(API_CONFIG_KEY, JSON.stringify(this.data))
+    const toSave = { ...this.data }
+    // Obfuscate key before storage
+    if (toSave.key) toSave.key = KeyCipher.encode(toSave.key)
+    wx.setStorageSync(API_CONFIG_KEY, JSON.stringify(toSave))
   },
 
   isConfigured() {
