@@ -1,0 +1,18 @@
+{
+  "name": "glimmer",
+  "version": "1.0.0",
+  "description": "每日微光 - 金句语录应用",
+  "private": true,
+  "scripts": {
+    "cap:init": "capacitor init",
+    "cap:add:android": "capacitor add android",
+    "cap:sync": "capacitor sync",
+    "cap:open:android": "capacitor open android",
+    "build:apk": "cd android && ./gradlew assembleDebug"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/android": "^6.0.0"
+  }
+}
