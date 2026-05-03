@@ -2074,14 +2074,6 @@ document.getElementById('settingsSave').addEventListener('click', async () => {
   }
 });
 
-// First-time setup guide
-if (!apiConfig.isConfigured() && !localStorage.getItem('glimmer_api_setup_done')) {
-  setTimeout(() => {
-    settingsPanel.show();
-    settingsPanel.showStatus('checking', '首次使用，请配置你的 API Key 以解锁无限语录功能');
-  }, 1500);
-}
-
 // Nav
 document.querySelectorAll('.nav-btn').forEach(btn => {
   btn.addEventListener('click', () => switchPage(btn.dataset.page));
