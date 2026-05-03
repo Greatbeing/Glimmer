@@ -2,7 +2,7 @@
 
 > 每日微光，照亮心房
 
-一个优雅的语录浏览应用，支持 Web 端和微信小程序。预设 30+ 精选金句，可接入 LLM API 无限生成高质量内容。
+一个优雅的语录浏览应用，支持 Web 端、微信小程序和 Android 原生应用。预设 30+ 精选金句，可接入 LLM API 无限生成高质量内容。
 
 ## ✨ 特性
 
@@ -13,10 +13,36 @@
 - **降级保护** — API 不可用时自动回退到预设内容
 - **暗色玻璃拟态** — 精致深邃的视觉体验
 - **滑动交互** — 上下滑动切换语录，自然流畅
+- **多端支持** — Web PWA、微信小程序、Android APK
 
 ## 🌐 在线演示
 
 https://greatbeing.github.io/Glimmer/
+
+## 📱 移动端
+
+### Android APK 下载
+
+直接下载并安装: [Glimmer-v1.0-debug.apk](https://github.com/Greatbeing/Glimmer/blob/main/Glimmer-v1.0-debug.apk)
+
+**安装步骤**:
+1. 在 Android 手机浏览器中打开上述链接
+2. 点击 "Download raw file" 下载 APK
+3. 打开下载的文件，允许"安装未知来源应用"
+4. 点击安装即可
+
+**特性**:
+- 全屏沉浸式体验
+- 离线可用
+- 支持滑动切换语录
+- 可配置 LLM API Key 无限生成金句
+- 大小: 3.7MB
+
+### PWA 添加到主屏幕
+
+1. 在 Chrome/Safari 中打开 [在线演示](https://greatbeing.github.io/Glimmer/)
+2. 点击浏览器菜单中的"添加到主屏幕"
+3. 即可像原生应用一样使用
 
 ## 🖥️ Web 端
 
@@ -29,7 +55,7 @@ https://greatbeing.github.io/Glimmer/
 3. 选择模型（推荐通义千问 qwen-turbo）
 4. 点击"保存并验证"
 
-> API Key 仅存储在本地浏览器，不会上传到任何服务器。
+> API Key 使用 Base64+混淆编码存储在本地浏览器，不会上传到任何服务器。
 
 ### 支持的模型
 
@@ -53,7 +79,8 @@ miniprogram/
 │   ├── publish/                     # 发布页 - 用户创作
 │   └── space/                       # 我的空间 - 设置与收藏
 ├── utils/
-│   └── quoteService.js              # LLM 核心模块
+│   ├── quoteService.js              # LLM 核心模块
+│   └── store.js                     # 共享数据存储模块
 └── images/                          # 图标资源
 ```
 
@@ -102,13 +129,25 @@ open index.html
 # 或使用任意 HTTP 服务器
 npx serve .
 python3 -m http.server 8080
+
+# Android 端 - 使用 Capacitor 构建
+npx cap sync android
+cd android && ./gradlew assembleDebug
 ```
 
 ## 📋 技术栈
 
 - **Web 端**: 纯 HTML/CSS/JS，零依赖单文件应用
 - **小程序端**: 微信小程序原生框架
+- **Android 端**: Capacitor + WebView 混合应用
 - **LLM 适配**: OpenAI 兼容 API 格式
+
+## 🔒 安全与隐私
+
+- API Key 使用 Base64+混淆编码存储，降低 XSS 攻击风险
+- 所有用户数据（收藏、点赞、发布）仅存储在本地
+- 不收集任何用户个人信息
+- 小程序已配置隐私协议 (`__usePrivacyCheck__: true`)
 
 ## 📝 License
 
