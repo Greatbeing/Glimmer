@@ -1564,33 +1564,62 @@ const quoteCache = {
     localStorage.setItem(this.historyKey, JSON.stringify(history));
   },
   
-  // Similarity check using Levenshtein distance
+  // Optimized similarity check using length filter + Levenshtein
   similarity(a, b) {
     if (!a || !b) return 0;
     if (a === b) return 1;
+    
+    // Fast path: length difference > 20% means similarity < 0.8
+    const lenDiff = Math.abs(a.length - b.length);
+    const maxLen = Math.max(a.length, b.length);
+    if (lenDiff / maxLen > (1 - QUOTE_CONSTANTS.SIMILARITY_THRESHOLD)) return 0;
+    
     const longer = a.length > b.length ? a : b;
     const shorter = a.length > b.length ? b : a;
     if (longer.length === 0) return 1;
-    const costs = [];
-    for (let i = 0; i <= shorter.length; i++) {
-      let last = i;
-      for (let j = 0; j <= longer.length; j++) {
-        if (i === 0) costs[j] = j;
-        else if (j === 0) costs[j] = last;
-        else {
-          const tmp = costs[j];
-          costs[j] = Math.min(costs[j - 1] + 1, last + 1, last + (shorter[i - 1] === longer[j - 1] ? 0 : 1));
-          last = tmp;
-        }
+    
+    // Optimized Levenshtein with early exit
+    const threshold = Math.floor(longer.length * (1 - QUOTE_CONSTANTS.SIMILARITY_THRESHOLD));
+    let prevRow = new Array(longer.length + 1).fill(0).map((_, i) => i);
+    
+    for (let i = 1; i <= shorter.length; i++) {
+      let currRow = [i];
+      let minVal = i;
+      
+      for (let j = 1; j <= longer.length; j++) {
+        const cost = shorter[i - 1] === longer[j - 1] ? 0 : 1;
+        const val = Math.min(
+          prevRow[j] + 1,
+          currRow[j - 1] + 1,
+          prevRow[j - 1] + cost
+        );
+        currRow.push(val);
+        minVal = Math.min(minVal, val);
       }
+      
+      // Early exit: if minimum distance exceeds threshold, similarity < threshold
+      if (minVal > threshold) return 1 - minVal / longer.length;
+      
+      prevRow = currRow;
     }
-    return 1 - costs[longer.length] / longer.length;
+    
+    return 1 - prevRow[longer.length] / longer.length;
   },
   
-  // Check if quote is duplicate based on similarity threshold
+  // Check if quote is duplicate using fast similarity
   isDuplicate(quote) {
     const history = this.getHistory();
-    return history.some(h => this.similarity(h, quote.zh) > QUOTE_CONSTANTS.SIMILARITY_THRESHOLD);
+    const newQuote = quote.zh;
+    
+    // Fast length filter first
+    const newLen = newQuote.length;
+    const filtered = history.filter(h => {
+      const lenDiff = Math.abs(h.length - newLen);
+      return lenDiff / Math.max(h.length, newLen) <= 0.2;
+    });
+    
+    // Full similarity check only on filtered candidates
+    return filtered.some(h => this.similarity(h, newQuote) > QUOTE_CONSTANTS.SIMILARITY_THRESHOLD);
   },
   
   async next() {
