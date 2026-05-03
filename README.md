@@ -14,6 +14,10 @@
 - **暗色玻璃拟态** — 精致深邃的视觉体验
 - **滑动交互** — 上下滑动切换语录，自然流畅
 
+## 🌐 在线演示
+
+https://greatbeing.github.io/Glimmer/
+
 ## 🖥️ Web 端
 
 打开 [index.html](index.html) 即可在浏览器中运行。
