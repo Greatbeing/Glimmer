@@ -1344,6 +1344,66 @@ let currentOscillators = [];
 let isDragging = false;
 let startY = 0;
 
+// ====== Security Utilities ======
+function escapeHtml(str) {
+  if (!str) return '';
+  const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '/': '&#x2F;', '`': '&#96;' };
+  return String(str).replace(/[&<>"'`\/]/g, c => map[c]);
+}
+
+function safeAttribute(val) {
+  if (!val) return '';
+  return String(val).replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+}
+
+// ====== Secure Storage ======
+const SecureStorage = {
+  _encode(str) {
+    if (!str) return '';
+    try {
+      const encoded = btoa(unescape(encodeURIComponent(str)));
+      return 'enc:' + encoded.split('').reverse().join('');
+    } catch(e) {
+      return str;
+    }
+  },
+
+  _decode(str) {
+    if (!str || !str.startsWith('enc:')) return str;
+    try {
+      const reversed = str.slice(4).split('').reverse().join('');
+      return decodeURIComponent(escape(atob(reversed)));
+    } catch(e) {
+      return str.slice(4);
+    }
+  },
+
+  setKey(key) {
+    localStorage.setItem('glimmer_api_config_key', this._encode(key));
+  },
+
+  getKey() {
+    return this._decode(localStorage.getItem('glimmer_api_config_key'));
+  }
+};
+
+// ====== Quote Constants ======
+const QUOTE_CONSTANTS = {
+  MAX_CACHE: 50,
+  MAX_HISTORY: 200,
+  CACHE_LOW_THRESHOLD: 5,
+  PRELOAD_TRIGGER: 3,
+  SIMILARITY_THRESHOLD: 0.8,
+  DAILY_QUOTA_LIMIT: 100,
+  API_TIMEOUT_MS: 5000,
+  COOLDOWN_DURATION_MS: 30 * 60 * 1000,
+  COOLDOWN_FAILURE_COUNT: 3,
+  BATCH_GENERATE_DELAY_MS: 500,
+  MAX_VISIBLE_DOTS: 10,
+  LIKE_COUNT_BASE: 50,
+  LIKE_COUNT_RANGE: 300
+};
+
 const store = {
   key: 'wg_data',
   data: null,
@@ -1425,19 +1485,35 @@ function renderQuote(direction) {
   };
 
   const catText = categoryMap[q.category] || '';
-  document.getElementById('quoteTag').innerHTML = catText ? `${q.tag} <span style="opacity:0.5;margin-left:4px;">· ${catText}</span>` : q.tag;
-  document.getElementById('quoteTag').style.display = q.tag ? 'inline-block' : 'none';
+  const tagEl = document.getElementById('quoteTag');
+  if (q.tag) {
+    tagEl.style.display = 'inline-block';
+    tagEl.textContent = q.tag;
+    if (catText) {
+      const span = document.createElement('span');
+      span.style.opacity = '0.5';
+      span.style.marginLeft = '4px';
+      span.textContent = `· ${catText}`;
+      tagEl.appendChild(span);
+    }
+  } else {
+    tagEl.style.display = 'none';
+  }
+  
   document.getElementById('badgeText').textContent = q.badge || '晨曦之光';
-  document.getElementById('likeCount').textContent = Math.floor(Math.random() * 300) + 50;
+  
+  // Use deterministic like count based on quote ID
+  const hash = q.id.split('').reduce((acc, c) => ((acc << 5) - acc + c.charCodeAt(0)) | 0, 0);
+  document.getElementById('likeCount').textContent = QUOTE_CONSTANTS.LIKE_COUNT_BASE + (Math.abs(hash) % QUOTE_CONSTANTS.LIKE_COUNT_RANGE);
 
   const liked = store.isLikedQuote(q.id);
   document.getElementById('likeBtn').classList.toggle('liked', liked);
   document.getElementById('catchBtn').classList.toggle('caught', store.isCaught(q.id));
 
-  // Dots - limit to max 10 visible dots
+  // Dots - limit to max visible dots
   const dots = document.getElementById('quoteDots');
   const totalQuotes = quotes.length;
-  const maxDots = 10;
+  const maxDots = QUOTE_CONSTANTS.MAX_VISIBLE_DOTS;
   
   if (totalQuotes <= maxDots) {
     dots.innerHTML = quotes.map((_, i) => `<span class="${i === currentIndex ? 'active' : ''}"></span>`).join('');
@@ -1456,10 +1532,6 @@ function renderQuote(direction) {
 const quoteCache = {
   cacheKey: 'glimmer_cache',
   historyKey: 'glimmer_history',
-  maxCache: 50,
-  maxHistory: 200,
-  lowThreshold: 5,
-  preloadTrigger: 3,
   
   getCache() {
     try {
@@ -1478,16 +1550,16 @@ const quoteCache = {
   },
   
   saveCache(cache) {
-    // Trim to max capacity
-    if (cache.length > this.maxCache) {
-      cache = cache.slice(0, this.maxCache);
+    // Trim to max capacity - keep newest entries
+    if (cache.length > QUOTE_CONSTANTS.MAX_CACHE) {
+      cache = cache.slice(-QUOTE_CONSTANTS.MAX_CACHE);
     }
     localStorage.setItem(this.cacheKey, JSON.stringify(cache));
   },
   
   saveHistory(history) {
-    if (history.length > this.maxHistory) {
-      history = history.slice(-this.maxHistory);
+    if (history.length > QUOTE_CONSTANTS.MAX_HISTORY) {
+      history = history.slice(-QUOTE_CONSTANTS.MAX_HISTORY);
     }
     localStorage.setItem(this.historyKey, JSON.stringify(history));
   },
@@ -1515,10 +1587,10 @@ const quoteCache = {
     return 1 - costs[longer.length] / longer.length;
   },
   
-  // Check if quote is duplicate based on 80% similarity
+  // Check if quote is duplicate based on similarity threshold
   isDuplicate(quote) {
     const history = this.getHistory();
-    return history.some(h => this.similarity(h, quote.zh) > 0.8);
+    return history.some(h => this.similarity(h, quote.zh) > QUOTE_CONSTANTS.SIMILARITY_THRESHOLD);
   },
   
   async next() {
@@ -1534,7 +1606,7 @@ const quoteCache = {
     this.saveHistory(history);
     
     // Trigger preload if needed
-    if (cache.length <= this.preloadTrigger) {
+    if (cache.length <= QUOTE_CONSTANTS.PRELOAD_TRIGGER) {
       this.preload();
     }
     
@@ -1548,14 +1620,14 @@ const quoteCache = {
   },
   
   needsRefill() {
-    return this.getCache().length < this.lowThreshold;
+    return this.getCache().length < QUOTE_CONSTANTS.CACHE_LOW_THRESHOLD;
   },
   
   async preload() {
     if (!apiConfig.isConfigured() || !quotaManager.canGenerate()) return;
     
     const currentSize = this.getCache().length;
-    const needed = this.lowThreshold + 2 - currentSize;
+    const needed = QUOTE_CONSTANTS.CACHE_LOW_THRESHOLD + 2 - currentSize;
     
     if (needed <= 0) return;
     
@@ -1603,9 +1675,9 @@ const quoteRouter = {
     } catch(e) {
       this.consecutiveFailures++;
       
-      // Cooldown after 3 failures
-      if (this.consecutiveFailures >= 3) {
-        this.cooldownUntil = Date.now() + 30 * 60 * 1000; // 30 minutes
+      // Cooldown after failure threshold
+      if (this.consecutiveFailures >= QUOTE_CONSTANTS.COOLDOWN_FAILURE_COUNT) {
+        this.cooldownUntil = Date.now() + QUOTE_CONSTANTS.COOLDOWN_DURATION_MS;
       }
       
       return this.getFallbackQuote();
@@ -1720,9 +1792,9 @@ function refreshSpace() {
 
   caughtEl.innerHTML = caught.length ? caught.map(q => `
     <div class="caught-card glass">
-      <div class="caught-text">${q.zh}</div>
-      <div class="caught-source">——《${q.source}》</div>
-      <button class="caught-remove" onclick="removeCaught('${q.id}')">✕</button>
+      <div class="caught-text">${escapeHtml(q.zh)}</div>
+      <div class="caught-source">——《${escapeHtml(q.source)}》</div>
+      <button class="caught-remove" onclick="removeCaught('${safeAttribute(q.id)}')">✕</button>
     </div>
   `).join('') : '<div class="empty"><div class="empty-icon">✦</div><div class="empty-text">暂无捕捉</div></div>';
 
@@ -1730,13 +1802,13 @@ function refreshSpace() {
     <div class="post-card glass">
       <div class="post-header">
         <span class="post-user">微光用户</span>
-        <span class="post-time">${formatTime(p.time)}</span>
+        <span class="post-time">${escapeHtml(formatTime(p.time))}</span>
       </div>
-      ${p.mood ? '<span class="post-mood">' + p.mood + '</span>' : ''}
-      <div class="post-content">${p.content}</div>
+      ${p.mood ? '<span class="post-mood">' + escapeHtml(p.mood) + '</span>' : ''}
+      <div class="post-content">${escapeHtml(p.content)}</div>
       <div class="post-footer">
-        <button class="post-action ${store.isLikedPost(p.id) ? 'liked' : ''}" onclick="togglePostLike('${p.id}')">♥ ${p.likes || 0}</button>
-        <button class="post-action" onclick="delPost('${p.id}')">删除</button>
+        <button class="post-action ${store.isLikedPost(p.id) ? 'liked' : ''}" onclick="togglePostLike('${safeAttribute(p.id)}')">♥ ${p.likes || 0}</button>
+        <button class="post-action" onclick="delPost('${safeAttribute(p.id)}')">删除</button>
       </div>
     </div>
   `).join('') : '<div class="empty"><div class="empty-icon">📝</div><div class="empty-text">暂无发布</div></div>';
@@ -1756,12 +1828,12 @@ function refreshPublishPosts() {
     <div class="post-card glass">
       <div class="post-header">
         <span class="post-user">微光用户</span>
-        <span class="post-time">${formatTime(p.time)}</span>
+        <span class="post-time">${escapeHtml(formatTime(p.time))}</span>
       </div>
-      ${p.mood ? '<span class="post-mood">' + p.mood + '</span>' : ''}
-      <div class="post-content">${p.content}</div>
+      ${p.mood ? '<span class="post-mood">' + escapeHtml(p.mood) + '</span>' : ''}
+      <div class="post-content">${escapeHtml(p.content)}</div>
       <div class="post-footer">
-        <button class="post-action ${store.isLikedPost(p.id) ? 'liked' : ''}" onclick="togglePostLike('${p.id}')">♥ ${p.likes || 0}</button>
+        <button class="post-action ${store.isLikedPost(p.id) ? 'liked' : ''}" onclick="togglePostLike('${safeAttribute(p.id)}')">♥ ${p.likes || 0}</button>
       </div>
     </div>
   `).join('');
@@ -1811,19 +1883,35 @@ const apiConfig = {
       const raw = localStorage.getItem('glimmer_api_config');
       if (raw) {
         const parsed = JSON.parse(raw);
-        this.key = parsed.key || null;
+        // Try secure storage first, fallback to plain storage for migration
+        this.key = SecureStorage.getKey() || parsed.key || null;
         this.model = parsed.model || 'qwen-turbo';
         this.baseUrl = parsed.baseUrl || 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+        
+        // Migrate to secure storage if key was in plain storage
+        if (this.key && !SecureStorage.getKey()) {
+          SecureStorage.setKey(this.key);
+          localStorage.setItem('glimmer_api_config', JSON.stringify({
+            key: null,
+            model: this.model,
+            baseUrl: this.baseUrl
+          }));
+        }
       }
     } catch(e) {}
   },
   
   save() {
+    // Save non-sensitive config normally
     localStorage.setItem('glimmer_api_config', JSON.stringify({
-      key: this.key,
+      key: null,
       model: this.model,
       baseUrl: this.baseUrl
     }));
+    // Save API key securely
+    if (this.key) {
+      SecureStorage.setKey(this.key);
+    }
   },
   
   isConfigured() {
@@ -1867,7 +1955,7 @@ const quoteGenerator = {
     const prompt = this.buildPrompt(cat);
     
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
+    const timeout = setTimeout(() => controller.abort(), QUOTE_CONSTANTS.API_TIMEOUT_MS);
     
     try {
       const response = await fetch(apiConfig.baseUrl + '/chat/completions', {
@@ -1954,7 +2042,7 @@ const quoteGenerator = {
         const quote = await this.generate();
         results.push(quote);
         // Add small delay between requests
-        await new Promise(r => setTimeout(r, 500));
+        await new Promise(r => setTimeout(r, QUOTE_CONSTANTS.BATCH_GENERATE_DELAY_MS));
       } catch(e) {
         console.warn('批量生成失败:', e.message);
       }
@@ -1966,7 +2054,6 @@ const quoteGenerator = {
 // Quota Manager
 const quotaManager = {
   key: 'glimmer_quota',
-  limit: 100,
   
   get() {
     try {
@@ -1977,7 +2064,7 @@ const quotaManager = {
         if (data.date === today) return data;
       }
     } catch(e) {}
-    return { date: new Date().toISOString().slice(0, 10), used: 0, limit: this.limit };
+    return { date: new Date().toISOString().slice(0, 10), used: 0, limit: QUOTE_CONSTANTS.DAILY_QUOTA_LIMIT };
   },
   
   record() {
@@ -1988,11 +2075,11 @@ const quotaManager = {
   },
   
   canGenerate() {
-    return this.get().used < this.limit;
+    return this.get().used < QUOTE_CONSTANTS.DAILY_QUOTA_LIMIT;
   },
   
   getRemaining() {
-    return Math.max(0, this.limit - this.get().used);
+    return Math.max(0, QUOTE_CONSTANTS.DAILY_QUOTA_LIMIT - this.get().used);
   }
 };
 
@@ -2010,7 +2097,7 @@ const settingsPanel = {
     this.apiKeyInput.value = apiConfig.key ? '••••••••' : '';
     this.modelSelect.value = apiConfig.model;
     this.apiUrlInput.value = apiConfig.baseUrl;
-    this.quotaDisplay.textContent = `${quotaManager.get().used} / ${quotaManager.limit}`;
+    this.quotaDisplay.textContent = `${quotaManager.get().used} / ${QUOTE_CONSTANTS.DAILY_QUOTA_LIMIT}`;
     this.statusEl.style.display = 'none';
     this.overlay.classList.add('show');
     this.panel.classList.add('show');
@@ -2047,6 +2134,9 @@ document.getElementById('settingsSave').addEventListener('click', async () => {
   
   settingsPanel.showStatus('checking', '正在验证 API Key...');
   
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), QUOTE_CONSTANTS.API_TIMEOUT_MS);
+  
   try {
     const response = await fetch(baseUrl + '/chat/completions', {
       method: 'POST',
@@ -2058,8 +2148,11 @@ document.getElementById('settingsSave').addEventListener('click', async () => {
         model: model,
         messages: [{ role: 'user', content: '你好' }],
         max_tokens: 10
-      })
+      }),
+      signal: controller.signal
     });
+    
+    clearTimeout(timeout);
     
     if (response.ok) {
       apiConfig.key = realKey;
@@ -2067,7 +2160,7 @@ document.getElementById('settingsSave').addEventListener('click', async () => {
       apiConfig.baseUrl = baseUrl;
       apiConfig.save();
       settingsPanel.showStatus('success', '✓ API Key 验证成功，已保存');
-      settingsPanel.quotaDisplay.textContent = `${quotaManager.get().used} / ${quotaManager.limit}`;
+      settingsPanel.quotaDisplay.textContent = `${quotaManager.get().used} / ${QUOTE_CONSTANTS.DAILY_QUOTA_LIMIT}`;
       localStorage.setItem('glimmer_api_setup_done', '1');
       setTimeout(() => settingsPanel.hide(), 1000);
     } else {
@@ -2075,7 +2168,12 @@ document.getElementById('settingsSave').addEventListener('click', async () => {
       settingsPanel.showStatus('error', `验证失败: ${err.error?.message || response.statusText}`);
     }
   } catch(e) {
-    settingsPanel.showStatus('error', `连接失败: ${e.message}`);
+    clearTimeout(timeout);
+    if (e.name === 'AbortError') {
+      settingsPanel.showStatus('error', '验证超时，请检查网络');
+    } else {
+      settingsPanel.showStatus('error', `连接失败: ${e.message}`);
+    }
   }
 });
 

@@ -1,3 +1,5 @@
+const Store = require('../../utils/store')
+
 Page({
   data: {
     content: '',
@@ -9,24 +11,12 @@ Page({
     this.loadPosts()
   },
 
-  getStore() {
-    try {
-      return wx.getStorageSync('wg_data') || { posts: [], likedPosts: [] }
-    } catch(e) {
-      return { posts: [], likedPosts: [] }
-    }
-  },
-
-  saveStore(data) {
-    wx.setStorageSync('wg_data', data)
-  },
-
   loadPosts() {
-    const store = this.getStore()
+    const store = Store.get()
     const posts = store.posts.map(p => ({
       ...p,
-      timeText: this.formatTime(p.time),
-      liked: store.likedPosts.includes(p.id)
+      timeText: Store.formatTime(p.time),
+      liked: Store.isLikedPost(p.id)
     }))
     this.setData({ posts })
   },
@@ -45,17 +35,37 @@ Page({
       return
     }
 
-    const store = this.getStore()
-    const post = {
-      id: 'p' + Date.now(),
-      content: this.data.content.trim(),
-      mood: this.data.selectedMood,
-      time: Date.now(),
-      likes: 0
+    // Content security check using wx API
+    const content = this.data.content.trim()
+    
+    // Try to use security check if available
+    if (wx.cloud) {
+      wx.cloud.callFunction({
+        name: 'contentCheck',
+        data: { content },
+        success: (res) => {
+          if (res.result && res.result.pass) {
+            this._doPublish()
+          } else {
+            wx.showToast({ title: '内容包含敏感信息，请修改后重试', icon: 'none' })
+          }
+        },
+        fail: () => {
+          // Fallback: proceed without cloud check
+          this._doPublish()
+        }
+      })
+    } else {
+      // No cloud environment, proceed directly
+      this._doPublish()
     }
+  },
 
-    store.posts.unshift(post)
-    this.saveStore(store)
+  _doPublish() {
+    Store.addPost({
+      content: this.data.content.trim(),
+      mood: this.data.selectedMood
+    })
     
     this.setData({ content: '', selectedMood: '' })
     this.loadPosts()
@@ -63,16 +73,8 @@ Page({
   },
 
   toggleLike(e) {
-    const store = this.getStore()
     const id = e.currentTarget.dataset.id
-    const idx = store.likedPosts.indexOf(id)
-    const post = store.posts.find(p => p.id === id)
-    
-    if (post) post.likes += (idx === -1 ? 1 : -1)
-    if (idx === -1) store.likedPosts.push(id)
-    else store.likedPosts.splice(idx, 1)
-    
-    this.saveStore(store)
+    Store.toggleLikePost(id)
     this.loadPosts()
   },
 
@@ -81,21 +83,11 @@ Page({
       title: '确定删除？',
       success: (res) => {
         if (res.confirm) {
-          const store = this.getStore()
-          store.posts = store.posts.filter(p => p.id !== e.currentTarget.dataset.id)
-          this.saveStore(store)
+          Store.deletePost(e.currentTarget.dataset.id)
           this.loadPosts()
           wx.showToast({ title: '已删除' })
         }
       }
     })
-  },
-
-  formatTime(ts) {
-    const d = Date.now() - ts
-    if (d < 60000) return '刚刚'
-    if (d < 3600000) return Math.floor(d / 60000) + '分钟前'
-    if (d < 86400000) return Math.floor(d / 3600000) + '小时前'
-    return Math.floor(d / 86400000) + '天前'
   }
 })

@@ -1,4 +1,8 @@
 const { ApiConfig, QuotaManager } = require('../../utils/quoteService')
+const Store = require('../../utils/store')
+
+// Constants
+const API_TIMEOUT = 5000
 
 Page({
   data: {
@@ -71,13 +75,15 @@ Page({
 
     // If masked, use existing key
     if (key === '••••••••') {
-      try { key = wx.getStorageSync('glimmer_api_config').key } catch(e) {}
+      try { key = ApiConfig.load().key } catch(e) {}
     }
 
     this.setData({ saving: true })
 
     try {
       await new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('请求超时')), API_TIMEOUT)
+        
         wx.request({
           url: baseUrl + '/chat/completions',
           method: 'POST',
@@ -91,10 +97,14 @@ Page({
             max_tokens: 10
           },
           success(res) {
+            clearTimeout(timer)
             if (res.statusCode === 200) resolve()
             else reject(new Error(res.data?.error?.message || res.statusCode))
           },
-          fail(err) { reject(err) }
+          fail(err) { 
+            clearTimeout(timer)
+            reject(new Error(err.errMsg || '网络错误')) 
+          }
         })
       })
 
@@ -110,31 +120,18 @@ Page({
     }
   },
 
-  getStore() {
-    try {
-      return wx.getStorageSync('wg_data') || { caughtQuotes: [], posts: [], likedQuotes: [], likedPosts: [] }
-    } catch(e) {
-      return { caughtQuotes: [], posts: [], likedQuotes: [], likedPosts: [] }
-    }
-  },
-
-  saveStore(data) {
-    wx.setStorageSync('wg_data', data)
-  },
-
   loadData() {
-    const store = this.getStore()
-    const likedPosts = store.likedPosts || []
+    const store = Store.get()
     const posts = store.posts.map(p => ({
       ...p,
-      timeText: this.formatTime(p.time),
-      liked: likedPosts.includes(p.id)
+      timeText: Store.formatTime(p.time),
+      liked: Store.isLikedPost(p.id)
     }))
 
     this.setData({
-      caught: store.caughtQuotes,
+      caught: Store.getCaught(),
       posts: posts,
-      caughtCount: store.caughtQuotes.length,
+      caughtCount: Store.getCaught().length,
       postCount: store.posts.length,
       likeCount: store.posts.reduce((s, p) => s + (p.likes || 0), 0)
     })
@@ -145,21 +142,8 @@ Page({
   },
 
   toggleLike(e) {
-    const store = this.getStore()
-    if (!store.likedPosts) store.likedPosts = []
     const id = e.currentTarget.dataset.id
-    const post = store.posts.find(p => p.id === id)
-    const idx = store.likedPosts.indexOf(id)
-
-    if (idx === -1) {
-      store.likedPosts.push(id)
-      if (post) post.likes = (post.likes || 0) + 1
-    } else {
-      store.likedPosts.splice(idx, 1)
-      if (post) post.likes = Math.max(0, (post.likes || 0) - 1)
-    }
-
-    this.saveStore(store)
+    Store.toggleLikePost(id)
     this.loadData()
   },
 
@@ -168,9 +152,7 @@ Page({
       title: '确定取消捕捉？',
       success: (res) => {
         if (res.confirm) {
-          const store = this.getStore()
-          store.caughtQuotes = store.caughtQuotes.filter(x => x.id !== e.currentTarget.dataset.id)
-          this.saveStore(store)
+          Store.removeCaught(e.currentTarget.dataset.id)
           this.loadData()
           wx.showToast({ title: '已取消' })
         }
@@ -183,22 +165,11 @@ Page({
       title: '确定删除？',
       success: (res) => {
         if (res.confirm) {
-          const store = this.getStore()
-          store.posts = store.posts.filter(p => p.id !== e.currentTarget.dataset.id)
-          store.likedPosts = (store.likedPosts || []).filter(id => id !== e.currentTarget.dataset.id)
-          this.saveStore(store)
+          Store.deletePost(e.currentTarget.dataset.id)
           this.loadData()
           wx.showToast({ title: '已删除' })
         }
       }
     })
-  },
-
-  formatTime(ts) {
-    const d = Date.now() - ts
-    if (d < 60000) return '刚刚'
-    if (d < 3600000) return Math.floor(d / 60000) + '分钟前'
-    if (d < 86400000) return Math.floor(d / 3600000) + '小时前'
-    return Math.floor(d / 86400000) + '天前'
   }
 })

@@ -65,25 +65,28 @@ const QuotaManager = {
 // ====== Quote Cache ======
 const CACHE_KEY = 'glimmer_cache'
 const HISTORY_KEY = 'glimmer_history'
+const MAX_CACHE = 50
+const MAX_HISTORY = 200
+const SIMILARITY_THRESHOLD = 0.8
+const COOLDOWN_DURATION_MS = 30 * 60 * 1000
+const COOLDOWN_FAILURE_COUNT = 3
 
 const QuoteCache = {
-  maxCache: 50,
-  maxHistory: 200,
-
   getCache() {
     try { return JSON.parse(wx.getStorageSync(CACHE_KEY)) || [] } catch (e) { return [] }
   },
 
   saveCache(list) {
-    if (list.length > this.maxCache) list = list.slice(0, this.maxCache)
+    // Keep newest entries (slice from end)
+    if (list.length > MAX_CACHE) list = list.slice(-MAX_CACHE)
     wx.setStorageSync(CACHE_KEY, JSON.stringify(list))
   },
 
   addHistory(text) {
     try {
       let hist = JSON.parse(wx.getStorageSync(HISTORY_KEY)) || []
-      hist.unshift(text)
-      if (hist.length > this.maxHistory) hist = hist.slice(0, this.maxHistory)
+      hist.push(text)
+      if (hist.length > MAX_HISTORY) hist = hist.slice(-MAX_HISTORY)
       wx.setStorageSync(HISTORY_KEY, JSON.stringify(hist))
     } catch (e) {}
   },
@@ -91,7 +94,7 @@ const QuoteCache = {
   isShown(text) {
     try {
       const hist = JSON.parse(wx.getStorageSync(HISTORY_KEY)) || []
-      return hist.some(h => this.similarity(h, text) > 0.8)
+      return hist.some(h => this.similarity(h, text) > SIMILARITY_THRESHOLD)
     } catch (e) { return false }
   },
 
@@ -240,8 +243,8 @@ const QuoteRouter = {
       return quote
     } catch (e) {
       this.consecutiveFailures++
-      if (this.consecutiveFailures >= 3) {
-        this.cooldownUntil = Date.now() + 30 * 60 * 1000
+      if (this.consecutiveFailures >= COOLDOWN_FAILURE_COUNT) {
+        this.cooldownUntil = Date.now() + COOLDOWN_DURATION_MS
       }
       return this.getFallbackQuote(appQuotes)
     }

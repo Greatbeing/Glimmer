@@ -1,5 +1,11 @@
 const app = getApp()
 const { ApiConfig, QuotaManager, QuoteCache, QuoteRouter } = require('../../utils/quoteService')
+const Store = require('../../utils/store')
+
+// Constants
+const LIKE_COUNT_BASE = 50
+const LIKE_COUNT_RANGE = 300
+const MAX_VISIBLE_DOTS = 10
 
 Page({
   data: {
@@ -15,7 +21,8 @@ Page({
     isDragging: false,
     isLoading: false,
     showApiIcon: false,
-    loadingText: ''
+    loadingText: '',
+    categoryText: ''
   },
 
   onLoad() {
@@ -30,12 +37,17 @@ Page({
     }
   },
 
+  // Deterministic like count based on quote ID
+  getLikeCount(id) {
+    const hash = id.split('').reduce((acc, c) => ((acc << 5) - acc + c.charCodeAt(0)) | 0, 0)
+    return LIKE_COUNT_BASE + (Math.abs(hash) % LIKE_COUNT_RANGE)
+  },
+
   showQuote() {
     const q = this.data.quotes[this.data.currentIndex]
     if (!q) return
-    const store = this.getStore()
+    
     const dots = this.data.dots.map((_, i) => i === this.data.currentIndex ? 1 : 0)
-
     const categoryMap = { literature: '文学', philosophy: '哲学', psychology: '心理', counterintuitive: '反常识' }
     const categoryText = categoryMap[q.category] || ''
 
@@ -43,46 +55,34 @@ Page({
       currentQuote: q,
       currentIndex: this.data.currentIndex,
       dots,
-      isLiked: store.likedQuotes.includes(q.id),
-      isCaught: store.caughtQuotes.some(x => x.id === q.id),
-      likeCount: Math.floor(Math.random() * 300) + 50,
+      isLiked: Store.isLikedPost(q.id) || false,
+      isCaught: Store.isCaught(q.id),
+      likeCount: this.getLikeCount(q.id),
       categoryText
     })
   },
 
-  getStore() {
-    try {
-      return wx.getStorageSync('wg_data') || { caughtQuotes: [], posts: [], likedQuotes: [], likedPosts: [] }
-    } catch(e) {
-      return { caughtQuotes: [], posts: [], likedQuotes: [], likedPosts: [] }
-    }
-  },
-
-  saveStore(data) {
-    wx.setStorageSync('wg_data', data)
-  },
-
   toggleLike() {
-    const store = this.getStore()
     const id = this.data.currentQuote.id
+    const store = Store.get()
+    if (!store.likedQuotes) store.likedQuotes = []
     const idx = store.likedQuotes.indexOf(id)
 
     if (idx === -1) store.likedQuotes.push(id)
     else store.likedQuotes.splice(idx, 1)
 
-    this.saveStore(store)
+    Store.save(store)
     this.setData({ isLiked: idx === -1 })
   },
 
   catchQuote() {
-    const store = this.getStore()
-    if (store.caughtQuotes.some(x => x.id === this.data.currentQuote.id)) {
+    const q = this.data.currentQuote
+    if (Store.isCaught(q.id)) {
       wx.showToast({ title: '已捕捉过', icon: 'none' })
       return
     }
 
-    store.caughtQuotes.unshift(this.data.currentQuote)
-    this.saveStore(store)
+    Store.addCaught(q)
     this.setData({ isCaught: true })
     wx.showToast({ title: '捕捉成功！' })
   },
@@ -143,13 +143,14 @@ Page({
 
       try {
         const newQuote = await QuoteRouter.getNextQuote(this.data.quotes)
-        const quotes = this.data.quotes
-        quotes.push(newQuote)
-        const dots = quotes.map((_, i) => i === quotes.length - 1 ? 1 : 0)
-
+        const quotes = [...this.data.quotes, newQuote]
         const categoryMap = { literature: '文学', philosophy: '哲学', psychology: '心理', counterintuitive: '反常识' }
         const categoryText = categoryMap[newQuote.category] || ''
-        const store = this.getStore()
+        
+        // Limit dots display
+        const dots = quotes.length <= MAX_VISIBLE_DOTS 
+          ? quotes.map((_, i) => i === quotes.length - 1 ? 1 : 0)
+          : []
 
         this.setData({
           quotes,
@@ -157,8 +158,8 @@ Page({
           dots,
           currentQuote: newQuote,
           isLiked: false,
-          isCaught: store.caughtQuotes.some(x => x.id === newQuote.id),
-          likeCount: Math.floor(Math.random() * 300) + 50,
+          isCaught: Store.isCaught(newQuote.id),
+          likeCount: this.getLikeCount(newQuote.id),
           categoryText,
           isLoading: false
         })
