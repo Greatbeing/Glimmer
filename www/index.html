@@ -134,8 +134,8 @@
       flex: 1;
       overflow-y: auto;
       position: relative;
-      padding: 8px;
-      padding-bottom: 80px;
+      padding: 12px;
+      padding-bottom: 88px;
       scrollbar-width: none;
     }
 
@@ -144,15 +144,15 @@
     .page {
       position: absolute;
       inset: 0;
-      padding: 8px;
-      padding-bottom: 80px;
+      padding: 12px;
+      padding-bottom: 88px;
       overflow-y: auto;
       display: none;
       scrollbar-width: none;
     }
 
     .page::-webkit-scrollbar { display: none; }
-    .page.active { display: flex; flex-direction: column; justify-content: center; }
+    .page.active { display: flex; flex-direction: column; justify-content: center; align-items: center; }
 
     /* ====== Quote Card ====== */
     .quote-card {
@@ -162,6 +162,8 @@
       transition: transform 0.3s ease, opacity 0.3s ease;
       touch-action: pan-y;
       user-select: none;
+      width: 100%;
+      max-width: 440px;
     }
 
     .quote-card::before {
@@ -805,6 +807,34 @@
       gap: 12px;
     }
 
+    .header-music {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .header-music:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .header-music.active {
+      background: rgba(251, 191, 36, 0.2);
+      border-color: rgba(251, 191, 36, 0.3);
+    }
+
+    .header-music svg {
+      width: 16px;
+      height: 16px;
+      fill: var(--amber-300);
+    }
+
     .header-bulb {
       width: 32px;
       height: 32px;
@@ -1046,6 +1076,9 @@
         <p>每日微光，照亮心房</p>
       </div>
       <div class="header-actions">
+        <button class="header-music" id="musicBtn" title="背景音乐">
+          <svg viewBox="0 0 512 512"><path d="M436.6 135.5c-16.3-19.4-40.7-30.5-66.1-30.5l-187.4 0c-11 0-21 4.5-28.3 11.7l-94.8 94.8c-15 15-23.4 35.4-23.4 56.6L36.6 400c0 44.2 35.8 80 80 80l316.7 0c44.2 0 80-35.8 80-80l0-231.3c0-11.3-2.4-22.3-6.7-33.2zM416 267.7l0 132.3c0 22.1-17.9 40-40 40L116.7 440c-22.1 0-40-17.9-40-40L76.7 268.3c0-6.9 2.8-13.6 7.7-18.5l83.4-83.4c3.8-3.8 9-6 14.4-6L370.5 160c10.5 0 20.5 4.5 27.5 12.3l18 20.4z"/></svg>
+        </button>
         <div class="header-bulb">
           <svg viewBox="0 0 384 512"><path d="M292.9 384c7.3-22.3 21.9-42.5 38.4-59.9 32.7-34.4 52.7-80.9 52.7-132.1 0-106-86-192-192-192S0 86 0 192c0 51.2 20 97.7 52.7 132.1 16.5 17.4 31.2 37.6 38.4 59.9l201.7 0zM288 432l-192 0 0 16c0 44.2 35.8 80 80 80l32 0c44.2 0 80-35.8 80-80l0-16zM184 112c-39.8 0-72 32.2-72 72 0 13.3-10.7 24-24 24s-24-10.7-24-24c0-66.3 53.7-120 120-120 13.3 0 24 10.7 24 24s-10.7 24-24 24z"/></svg>
         </div>
@@ -1743,13 +1776,17 @@ function playMusic() {
     currentOscillators.push(osc);
   });
   isPlaying = true;
-  setTimeout(() => { isPlaying = false; }, 3000);
+  const btn = document.getElementById('musicBtn');
+  if (btn) btn.classList.add('active');
+  setTimeout(() => { isPlaying = false; const b = document.getElementById('musicBtn'); if (b) b.classList.remove('active'); }, 3000);
 }
 
 function stopMusic() {
   currentOscillators.forEach(osc => { try { osc.stop(); } catch(e) {} });
   currentOscillators = [];
   isPlaying = false;
+  const btn = document.getElementById('musicBtn');
+  if (btn) btn.classList.remove('active');
 }
 
 function switchPage(name) {
@@ -2108,6 +2145,18 @@ const settingsPanel = {
 document.getElementById('settingsBtn').addEventListener('click', () => settingsPanel.show());
 document.getElementById('settingsOverlay').addEventListener('click', () => settingsPanel.hide());
 document.getElementById('settingsCancel').addEventListener('click', () => settingsPanel.hide());
+
+// Music Toggle
+document.getElementById('musicBtn').addEventListener('click', () => {
+  const btn = document.getElementById('musicBtn');
+  if (isPlaying) {
+    stopMusic();
+    btn.classList.remove('active');
+  } else {
+    playMusic();
+    btn.classList.add('active');
+  }
+});
 
 document.getElementById('settingsSave').addEventListener('click', async () => {
   const key = settingsPanel.apiKeyInput.value.trim();
