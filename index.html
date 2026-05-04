@@ -833,9 +833,13 @@
     }
 
     .header-music svg {
-      width: 16px;
-      height: 16px;
-      fill: var(--amber-300);
+      width: 18px;
+      height: 18px;
+      color: var(--amber-300);
+    }
+
+    .header-music.active svg {
+      color: var(--amber-400);
     }
 
     .header-bulb {
@@ -1080,7 +1084,11 @@
       </div>
       <div class="header-actions">
         <button class="header-music" id="musicBtn" title="背景音乐">
-          <svg viewBox="0 0 512 512"><path d="M499.1 71.6c-8.7-7.6-21.4-9.1-31.6-4L288 149.6V48c0-17.7-14.3-32-32-32s-32 14.3-32 32v256c0 17.7 14.3 32 32 32s32-14.3 32-32V245.6l160-64v174.4c0 17.7 14.3 32 32 32s32-14.3 32-32V96c0-9.5-4.1-18.1-10.9-24.4zM192 224c-53 0-96 43-96 96s43 96 96 96 96-43 96-96-43-96-96-96z"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 18V5l12-2v13"></path>
+            <circle cx="6" cy="18" r="3"></circle>
+            <circle cx="18" cy="16" r="3"></circle>
+          </svg>
         </button>
         <div class="header-bulb">
           <svg viewBox="0 0 384 512"><path d="M292.9 384c7.3-22.3 21.9-42.5 38.4-59.9 32.7-34.4 52.7-80.9 52.7-132.1 0-106-86-192-192-192S0 86 0 192c0 51.2 20 97.7 52.7 132.1 16.5 17.4 31.2 37.6 38.4 59.9l201.7 0zM288 432l-192 0 0 16c0 44.2 35.8 80 80 80l32 0c44.2 0 80-35.8 80-80l0-16zM184 112c-39.8 0-72 32.2-72 72 0 13.3-10.7 24-24 24s-24-10.7-24-24c0-66.3 53.7-120 120-120 13.3 0 24 10.7 24 24s-10.7 24-24 24z"/></svg>
