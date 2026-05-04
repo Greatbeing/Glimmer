@@ -581,136 +581,175 @@
     elements.musicBtn.addEventListener('click', toggleMusic);
   }
 
-  // 音乐播放 - 环境音乐生成器
+  // 音乐播放 - 巴赫G大调大提琴合成器
+  let bgAudio = null;
+  let celloTimeout = null;
+  let melodyInterval = null;
+  let noteIndex = 0;
+
+  // 巴赫G大调大提琴组曲第1号前奏曲旋律片段 (简化版)
+  const BACH_MELODY = [
+    // 前奏曲主旋律 - G大调音阶琶音
+    { freq: 196.00, dur: 0.8 },  // G3
+    { freq: 246.94, dur: 0.6 },  // B3
+    { freq: 293.66, dur: 0.4 },  // D4
+    { freq: 349.23, dur: 0.8 },  // F4
+    { freq: 392.00, dur: 0.4 },  // G4
+    { freq: 440.00, dur: 0.6 },  // A4
+    { freq: 493.88, dur: 0.4 },  // B4
+    { freq: 523.25, dur: 0.8 },  // C5
+    { freq: 493.88, dur: 0.4 },  // B4
+    { freq: 440.00, dur: 0.6 },  // A4
+    { freq: 392.00, dur: 0.8 },  // G4
+    { freq: 349.23, dur: 0.4 },  // F4
+    { freq: 293.66, dur: 0.8 },  // D4
+    { freq: 246.94, dur: 0.6 },  // B3
+    { freq: 220.00, dur: 0.4 },  // A3
+    { freq: 196.00, dur: 1.2 },  // G3
+    // 下行音阶
+    { freq: 220.00, dur: 0.4 },
+    { freq: 246.94, dur: 0.4 },
+    { freq: 261.63, dur: 0.4 },
+    { freq: 293.66, dur: 0.4 },
+    { freq: 329.63, dur: 0.4 },
+    { freq: 349.23, dur: 0.4 },
+    { freq: 392.00, dur: 0.6 },
+    { freq: 440.00, dur: 0.4 },
+    { freq: 392.00, dur: 0.6 },
+    { freq: 329.63, dur: 0.4 },
+    { freq: 293.66, dur: 0.8 },
+    { freq: 246.94, dur: 0.6 },
+    { freq: 220.00, dur: 0.4 },
+    { freq: 196.00, dur: 1.0 },
+    // 持续音
+    { freq: 98.00,  dur: 1.5 },  // G2 低音持续
+    { freq: 196.00, dur: 0.5 },
+    { freq: 293.66, dur: 0.5 },
+    { freq: 392.00, dur: 0.5 },
+    { freq: 293.66, dur: 0.5 },
+    { freq: 196.00, dur: 0.5 },
+    { freq: 146.83, dur: 1.0 },  // D3
+    { freq: 196.00, dur: 1.0 },  // G3
+  ];
+
   function toggleMusic() {
     if (state.isPlaying) {
       stopMusic();
     } else {
-      playAmbientMusic();
+      playCelloMusic();
     }
   }
 
-  // 环境和弦进行
-  const AMBIENT_CHORDS = [
-    [261.63, 329.63, 392.00], // C major
-    [293.66, 369.99, 440.00], // D major
-    [329.63, 415.30, 493.88], // E major
-    [349.23, 440.00, 523.25], // F major
-    [392.00, 493.88, 587.33], // G major
-    [440.00, 554.37, 659.25], // A major
-  ];
-
-  let ambientInterval = null;
-  let currentChordIndex = 0;
-
-  function playAmbientMusic() {
+  function playCelloMusic() {
     if (!state.audioCtx) {
       state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
 
     state.isPlaying = true;
+    noteIndex = 0;
     elements.musicBtn.style.color = 'var(--amber-300)';
-    showToast('播放中');
+    showToast('播放中 - 巴赫G大调大提琴组曲');
 
-    // 播放第一个和弦
-    playChord(AMBIENT_CHORDS[currentChordIndex]);
-
-    // 每4秒切换和弦
-    ambientInterval = setInterval(() => {
-      stopCurrentChord();
-      currentChordIndex = (currentChordIndex + 1) % AMBIENT_CHORDS.length;
-      playChord(AMBIENT_CHORDS[currentChordIndex]);
-    }, 4000);
-  }
-
-  function playChord(frequencies) {
-    const ctx = state.audioCtx;
-    state.currentOscillators = [];
-
-    // 创建混响效果（使用延迟模拟）
-    const masterGain = ctx.createGain();
-    masterGain.gain.value = 0;
-    masterGain.gain.setValueAtTime(0, ctx.currentTime);
-    masterGain.gain.linearRampToValueAtTime(0.08, ctx.currentTime + 1.5);
-    masterGain.connect(ctx.destination);
-
-    // 为每个频率创建振荡器
-    frequencies.forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      osc.type = 'sine';
-      osc.frequency.value = freq;
-
-      // 添加轻微颤音
-      const lfo = ctx.createOscillator();
-      const lfoGain = ctx.createGain();
-      lfo.frequency.value = 0.5 + i * 0.3;
-      lfoGain.gain.value = 2;
-      lfo.connect(lfoGain);
-      lfoGain.connect(osc.frequency);
-      lfo.start();
-
-      // 音量包络
-      gain.gain.value = 0;
-      gain.gain.setValueAtTime(0, ctx.currentTime);
-      gain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + 2);
-
-      osc.connect(gain);
-      gain.connect(masterGain);
-      osc.start();
-
-      state.currentOscillators.push({ osc, gain, lfo });
-    });
-
-    // 添加低音
-    const bassOsc = ctx.createOscillator();
-    const bassGain = ctx.createGain();
-    bassOsc.type = 'sine';
-    bassOsc.frequency.value = frequencies[0] / 2;
-    bassGain.gain.value = 0;
-    bassGain.gain.setValueAtTime(0, ctx.currentTime);
-    bassGain.gain.linearRampToValueAtTime(0.06, ctx.currentTime + 2);
-    bassOsc.connect(bassGain);
-    bassGain.connect(masterGain);
-    bassOsc.start();
-    state.currentOscillators.push({ osc: bassOsc, gain: bassGain });
-  }
-
-  function stopCurrentChord() {
-    const ctx = state.audioCtx;
-    if (!ctx || !state.currentOscillators) return;
-
-    // 淡出
-    state.currentOscillators.forEach(({ osc, gain }) => {
-      if (gain) {
-        gain.gain.cancelScheduledValues(ctx.currentTime);
-        gain.gain.setValueAtTime(gain.gain.value, ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 1);
+    playNextNote();
+    
+    // 持续循环播放
+    melodyInterval = setInterval(() => {
+      if (state.isPlaying) {
+        playNextNote();
       }
-    });
+    }, 800);
+  }
 
-    setTimeout(() => {
-      state.currentOscillators.forEach(({ osc, lfo }) => {
-        try {
-          osc.stop();
-          if (lfo) lfo.stop();
-        } catch (e) {}
-      });
-      state.currentOscillators = [];
-    }, 1200);
+  function playNextNote() {
+    const ctx = state.audioCtx;
+    if (!ctx) return;
+
+    const note = BACH_MELODY[noteIndex % BACH_MELODY.length];
+    noteIndex++;
+
+    // 创建大提琴音色
+    const now = ctx.currentTime;
+    const duration = note.dur;
+
+    // 主振荡器 - 模拟琴弦振动
+    const osc1 = ctx.createOscillator();
+    osc1.type = 'sawtooth';
+    osc1.frequency.value = note.freq;
+
+    // 谐波振荡器 - 增加泛音
+    const osc2 = ctx.createOscillator();
+    osc2.type = 'sine';
+    osc2.frequency.value = note.freq * 2;
+
+    // 第三谐波
+    const osc3 = ctx.createOscillator();
+    osc3.type = 'sine';
+    osc3.frequency.value = note.freq * 3;
+
+    // 琴体共鸣 - 低频共振
+    const osc4 = ctx.createOscillator();
+    osc4.type = 'sine';
+    osc4.frequency.value = note.freq * 0.5;
+
+    // 增益节点 - 音量包络
+    const gain1 = ctx.createGain();
+    gain1.gain.setValueAtTime(0, now);
+    gain1.gain.linearRampToValueAtTime(0.08, now + 0.1);  // 慢起弓
+    gain1.gain.linearRampToValueAtTime(0.06, now + duration * 0.5);
+    gain1.gain.linearRampToValueAtTime(0, now + duration);
+
+    const gain2 = ctx.createGain();
+    gain2.gain.value = 0.03;
+
+    const gain3 = ctx.createGain();
+    gain3.gain.value = 0.015;
+
+    const gain4 = ctx.createGain();
+    gain4.gain.value = 0.04;
+
+    // 颤音效果 (LFO)
+    const vibrato = ctx.createOscillator();
+    vibrato.frequency.value = 5.5;  // 大提琴颤音频率
+    const vibratoGain = ctx.createGain();
+    vibratoGain.gain.value = 3;  // 颤音深度
+    vibrato.connect(vibratoGain);
+    vibratoGain.connect(osc1.frequency);
+    vibratoGain.connect(osc2.frequency);
+
+    // 连接
+    osc1.connect(gain1);
+    osc2.connect(gain2);
+    gain2.connect(gain1);
+    osc3.connect(gain3);
+    gain3.connect(gain1);
+    osc4.connect(gain4);
+    gain4.connect(gain1);
+    gain1.connect(ctx.destination);
+
+    // 启动
+    osc1.start(now);
+    osc2.start(now);
+    osc3.start(now);
+    osc4.start(now);
+    vibrato.start(now);
+
+    // 停止
+    osc1.stop(now + duration);
+    osc2.stop(now + duration);
+    osc3.stop(now + duration);
+    osc4.stop(now + duration);
+    vibrato.stop(now + duration);
   }
 
   function stopMusic() {
     state.isPlaying = false;
     elements.musicBtn.style.color = '';
 
-    if (ambientInterval) {
-      clearInterval(ambientInterval);
-      ambientInterval = null;
+    if (melodyInterval) {
+      clearInterval(melodyInterval);
+      melodyInterval = null;
     }
 
-    stopCurrentChord();
     showToast('已停止');
   }
 
