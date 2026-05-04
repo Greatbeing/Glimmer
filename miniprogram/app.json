@@ -2,6 +2,7 @@
   "pages": [
     "pages/index/index",
     "pages/publish/publish",
+    "pages/feed/feed",
     "pages/space/space"
   ],
   "window": {
@@ -21,6 +22,12 @@
         "text": "每日推荐",
         "iconPath": "images/icon-home.png",
         "selectedIconPath": "images/icon-home-active.png"
+      },
+      {
+        "pagePath": "pages/feed/feed",
+        "text": "发现",
+        "iconPath": "images/icon-publish.png",
+        "selectedIconPath": "images/icon-publish-active.png"
       },
       {
         "pagePath": "pages/publish/publish",

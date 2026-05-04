@@ -30,9 +30,10 @@
 
   <!-- 统计栏 -->
   <view class="stats-bar" wx:if="{{isLoggedIn}}">
-    <view class="stat-item" bindtap="showCheckin">
+    <view class="stat-item" bindtap="doCheckin">
       <text class="stat-value">{{checkinStreak}}</text>
       <text class="stat-label">连续打卡</text>
+      <view class="checkin-badge" wx:if="{{!hasCheckedInToday}}">+</view>
     </view>
     <view class="stat-item">
       <text class="stat-value">{{caughtCount}}</text>
@@ -46,6 +47,22 @@
       <text class="stat-value">{{likeCount}}</text>
       <text class="stat-label">获赞</text>
     </view>
+  </view>
+
+  <!-- 徽章展示 -->
+  <view class="badges-section" wx:if="{{isLoggedIn && badges.length > 0}}">
+    <view class="badges-header">
+      <text class="badges-title">我的徽章</text>
+      <text class="badges-count">{{badges.length}}/{{totalBadges}}</text>
+    </view>
+    <scroll-view class="badges-scroll" scroll-x>
+      <view class="badges-list">
+        <view class="badge-item" wx:for="{{badges}}" wx:key="key">
+          <view class="badge-icon">{{item.icon}}</view>
+          <text class="badge-name">{{item.name}}</text>
+        </view>
+      </view>
+    </scroll-view>
   </view>
 
   <!-- 邀请卡片 -->

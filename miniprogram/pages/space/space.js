@@ -1,6 +1,8 @@
 const { ApiConfig, QuotaManager } = require('../../utils/quoteService')
 const Store = require('../../utils/store')
 const auth = require('../../utils/auth')
+const checkinManager = require('../../utils/checkin')
+const badgeManager = require('../../utils/badges')
 
 // Constants
 const API_TIMEOUT = 5000
@@ -16,6 +18,9 @@ Page({
     postCount: 0,
     likeCount: 0,
     checkinStreak: 0,
+    hasCheckedInToday: false,
+    badges: [],
+    totalBadges: 0,
     // API Settings
     showSettings: false,
     apiKeyInput: '',
@@ -33,18 +38,80 @@ Page({
     const user = auth.getUser()
     const isLoggedIn = auth.isLoggedIn()
 
+    // 检查今天是否已签到
+    const hasCheckedInToday = checkinManager._getToday() === (Store.get().checkins || []).slice(-1)[0]?.date
+
     this.setData({
       isLoggedIn,
       user,
       checkinStreak: user.stats?.checkinStreak || 0,
+      hasCheckedInToday,
       quotaUsed: user.llmQuota?.used || 0,
       quotaTotal: (user.llmQuota?.base || 100) + (user.llmQuota?.bonus || 0)
     })
 
     if (isLoggedIn) {
       this.loadData()
+      this.loadBadges()
     }
     this.loadApiConfig()
+  },
+
+  // 加载徽章
+  loadBadges() {
+    const user = auth.getUser()
+    const stats = user.stats || { catches: 0, posts: 0, likes: 0, invites: 0, checkinStreak: 0 }
+
+    const badges = badgeManager.getUserBadges()
+    const totalBadges = badgeManager.getTotalCount()
+
+    this.setData({ badges, totalBadges })
+  },
+
+  // 执行签到
+  async doCheckin() {
+    if (this.data.hasCheckedInToday) {
+      wx.showToast({ title: `已连续打卡 ${this.data.checkinStreak} 天`, icon: 'none' })
+      return
+    }
+
+    // 本地签到
+    const result = checkinManager.doCheckin()
+
+    if (result.success) {
+      this.setData({
+        checkinStreak: result.streak,
+        hasCheckedInToday: true
+      })
+
+      // 检查并颁发徽章
+      const user = auth.getUser()
+      const stats = user.stats || {}
+      stats.checkinStreak = result.streak
+      const newBadges = await badgeManager.checkAndAwardBadges(stats)
+
+      if (newBadges.length > 0) {
+        this.loadBadges()
+      }
+
+      // 同步到云端
+      auth.enqueueSync({
+        type: 'checkin',
+        data: {
+          date: checkinManager._getToday(),
+          streak: result.streak,
+          reward: result.reward
+        }
+      })
+
+      wx.showModal({
+        title: '签到成功',
+        content: result.message,
+        showCancel: false
+      })
+    } else {
+      wx.showToast({ title: result.message, icon: 'none' })
+    }
   },
 
   // 微信授权登录
