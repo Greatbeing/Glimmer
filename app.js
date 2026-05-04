@@ -577,8 +577,8 @@
       });
     });
 
-    // 音乐按钮
-    elements.musicBtn.addEventListener('click', toggleMusic);
+    // 音乐按钮 - 已禁用
+    // elements.musicBtn.addEventListener('click', toggleMusic);
   }
 
   // 音乐播放 - 巴赫G大调大提琴合成器
@@ -633,11 +633,7 @@
   ];
 
   function toggleMusic() {
-    if (state.isPlaying) {
-      stopMusic();
-    } else {
-      playCelloMusic();
-    }
+    showToast('背景音乐功能已移除');
   }
 
   function playCelloMusic() {
