@@ -5,12 +5,10 @@ const Store = require('../../utils/store')
 // Constants
 const LIKE_COUNT_BASE = 50
 const LIKE_COUNT_RANGE = 300
-const MAX_VISIBLE_DOTS = 10
 
 Page({
   data: {
     quotes: [],
-    dots: [],
     currentQuote: {},
     currentIndex: 0,
     isLiked: false,
@@ -28,7 +26,7 @@ Page({
   onLoad() {
     const quotes = app.globalData.quotes
     ApiConfig.load()
-    this.setData({ quotes, dots: quotes.map(() => 0), showApiIcon: !ApiConfig.isConfigured() })
+    this.setData({ quotes, showApiIcon: !ApiConfig.isConfigured() })
     this.showQuote()
 
     // Preload LLM quotes if configured
@@ -47,14 +45,12 @@ Page({
     const q = this.data.quotes[this.data.currentIndex]
     if (!q) return
     
-    const dots = this.data.dots.map((_, i) => i === this.data.currentIndex ? 1 : 0)
     const categoryMap = { literature: '文学', philosophy: '哲学', psychology: '心理', counterintuitive: '反常识' }
     const categoryText = categoryMap[q.category] || ''
 
     this.setData({
       currentQuote: q,
       currentIndex: this.data.currentIndex,
-      dots,
       isLiked: Store.isLikedPost(q.id) || false,
       isCaught: Store.isCaught(q.id),
       likeCount: this.getLikeCount(q.id),
@@ -88,9 +84,12 @@ Page({
   },
 
   toggleMusic() {
-    this.setData({ isPlaying: !this.data.isPlaying })
     if (this.data.isPlaying) {
-      wx.showToast({ title: '播放音乐', icon: 'none' })
+      this.setData({ isPlaying: false })
+      wx.showToast({ title: '已停止', icon: 'none' })
+    } else {
+      this.setData({ isPlaying: true })
+      wx.showToast({ title: '播放中', icon: 'none' })
     }
   },
 
@@ -147,15 +146,9 @@ Page({
         const categoryMap = { literature: '文学', philosophy: '哲学', psychology: '心理', counterintuitive: '反常识' }
         const categoryText = categoryMap[newQuote.category] || ''
         
-        // Limit dots display
-        const dots = quotes.length <= MAX_VISIBLE_DOTS 
-          ? quotes.map((_, i) => i === quotes.length - 1 ? 1 : 0)
-          : []
-
         this.setData({
           quotes,
           currentIndex: quotes.length - 1,
-          dots,
           currentQuote: newQuote,
           isLiked: false,
           isCaught: Store.isCaught(newQuote.id),

@@ -5,12 +5,13 @@
       <text class="logo">Glimmer</text>
       <text class="slogan">每日微光，照亮心房</text>
     </view>
-    <view class="header-right">
-      <view class="settings-btn" wx:if="{{showApiIcon}}" bindtap="goToSettings">⚙</view>
-      <view class="header-bulb">
-        <text class="header-bulb-icon">💡</text>
-      </view>
+  <view class="header-right">
+    <view class="header-music {{isPlaying ? 'active' : ''}}" bindtap="toggleMusic">🎵</view>
+    <view class="header-bulb">
+      <text class="header-bulb-icon">💡</text>
     </view>
+    <view class="settings-btn" wx:if="{{showApiIcon}}" bindtap="goToSettings">⚙</view>
+  </view>
   </view>
 
   <!-- Quote Card -->
@@ -63,8 +64,4 @@
     </view>
   </view>
 
-  <!-- Pagination Dots -->
-  <view class="quote-dots">
-    <view class="dot {{index === currentIndex ? 'active' : ''}}" wx:for="{{dots}}" wx:key="index"></view>
-  </view>
 </view>
