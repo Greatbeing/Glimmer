@@ -51,13 +51,51 @@ Page({
           page: this.data.page + 1,
           hasMore: result.result.hasMore
         })
+        return
       }
     } catch (error) {
       console.error('加载内容流失败:', error)
-      wx.showToast({ title: '加载失败', icon: 'none' })
+      // 云函数调用失败，使用本地数据回退
+      this._loadLocalFeed()
+      return
     } finally {
       this.setData({ loading: false })
     }
+    
+    // 如果云函数返回不成功，也尝试本地数据
+    if (this.data.feed.length === 0) {
+      this._loadLocalFeed()
+    }
+  },
+
+  // 从本地加载feed数据（回退方案）
+  _loadLocalFeed() {
+    const store = Store.get()
+    const localPosts = store.posts || []
+    
+    if (localPosts.length === 0) {
+      wx.showToast({ title: '暂无内容，快去发布吧', icon: 'none' })
+      return
+    }
+
+    // 格式化本地数据
+    const localFeed = localPosts.map(post => ({
+      _id: post.id,
+      content: post.content,
+      mood: post.mood || '',
+      quote: post.quote || null,
+      likeCount: post.likes || 0,
+      commentCount: 0,
+      user: { nickName: '微光用户', avatarUrl: '' },
+      createdAt: new Date(post.time).toISOString(),
+      timeText: Store.formatTime(post.time),
+      isLiked: Store.isLikedPost(post.id)
+    }))
+
+    this.setData({
+      feed: localFeed,
+      hasMore: false
+    })
   },
 
   // 加载更多

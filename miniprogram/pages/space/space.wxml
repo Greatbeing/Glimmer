@@ -25,6 +25,7 @@
     </view>
     <view class="header-actions">
       <view class="settings-icon" bindtap="showApiSettings">⚙</view>
+      <view class="logout-icon" bindtap="handleLogout">退出</view>
     </view>
   </view>
 
@@ -57,7 +58,7 @@
     </view>
     <scroll-view class="badges-scroll" scroll-x>
       <view class="badges-list">
-        <view class="badge-item" wx:for="{{badges}}" wx:key="key">
+        <view class="badge-item" wx:for="{{badges}}" wx:key="key" data-index="{{index}}" bindtap="viewBadgeDetail">
           <view class="badge-icon">{{item.icon}}</view>
           <text class="badge-name">{{item.name}}</text>
         </view>
@@ -69,7 +70,8 @@
   <view class="invite-card" wx:if="{{isLoggedIn}}">
     <view class="invite-header">
       <text class="invite-title">邀请好友</text>
-      <text class="invite-code">{{user.inviteCode}}</text>
+      <text class="invite-code" wx:if="{{user.inviteCode}}">{{user.inviteCode}}</text>
+      <text class="invite-code empty" wx:else>登录后获取邀请码</text>
     </view>
     <text class="invite-desc">分享邀请码，好友注册双方各得 50 次 LLM 额度</text>
     <view class="invite-actions">

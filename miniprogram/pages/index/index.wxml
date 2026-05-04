@@ -15,7 +15,9 @@
   </view>
 
   <!-- Quote Card -->
-  <view class="quote-card {{isLoading ? 'loading' : ''}}" bindtouchstart="onTouchStart" bindtouchmove="onTouchMove" bindtouchend="onTouchEnd">
+  <view class="quote-card {{isLoading ? 'loading' : ''}}" 
+        style="transform: translateY({{swipeOffset}}px); opacity: {{swipeOpacity}};"
+        bindtouchstart="onTouchStart" bindtouchmove="onTouchMove" bindtouchend="onTouchEnd">
     <view class="quote-inner">
       <!-- Loading Overlay -->
       <view class="loading-overlay" wx:if="{{isLoading}}">
@@ -53,7 +55,7 @@
           </view>
           <view class="action-btn" bindtap="toggleComment">
             <text class="action-icon">💬</text>
-            <text class="action-count">0</text>
+            <text class="action-count">{{commentCount}}</text>
           </view>
           <view class="action-btn" bindtap="shareQuote">
             <text class="action-icon">↗</text>
@@ -64,6 +66,28 @@
           <text class="capture-icon">📷</text>
           <text>捕捉微光</text>
         </view>
+      </view>
+    </view>
+
+    <!-- Comments Panel -->
+    <view class="comments-panel" wx:if="{{showComments}}">
+      <view class="comments-header">
+        <text class="comments-title">评论 ({{commentCount}})</text>
+      </view>
+      <view class="comments-list">
+        <view class="comment-item" wx:for="{{currentComments}}" wx:key="id">
+          <text class="comment-user">{{item.user}}</text>
+          <text class="comment-text">{{item.content}}</text>
+          <text class="comment-time">{{item.time}}</text>
+        </view>
+        <view class="empty-comments" wx:if="{{commentCount === 0}}">
+          <text>暂无评论，快来抢沙发~</text>
+        </view>
+      </view>
+      <view class="comment-input-area">
+        <input class="comment-input" placeholder="写下你的想法..." 
+               value="{{commentInput}}" bindinput="onCommentInput" bindconfirm="submitComment"/>
+        <button class="comment-submit" bindtap="submitComment">发送</button>
       </view>
     </view>
   </view>

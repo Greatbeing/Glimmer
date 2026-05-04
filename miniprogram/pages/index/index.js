@@ -6,6 +6,12 @@ const shareCardGenerator = require('../../utils/shareCard')
 // Constants
 const LIKE_COUNT_BASE = 50
 const LIKE_COUNT_RANGE = 300
+const MUSIC_NOTES = {
+  literature: { freq: 440, label: 'A' },    // A4
+  philosophy: { freq: 494, label: 'B' },   // B4
+  psychology: { freq: 523, label: 'C' },   // C5
+  counterintuitive: { freq: 587, label: 'D' } // D5
+}
 
 Page({
   data: {
@@ -23,18 +29,54 @@ Page({
     loadingText: '',
     categoryText: '',
     canvasWidth: 600,
-    canvasHeight: 800
+    canvasHeight: 800,
+    // New: swipe animation
+    swipeOffset: 0,
+    swipeOpacity: 1,
+    // New: comments
+    commentCount: 0,
+    commentInput: '',
+    showComments: false,
+    currentComments: []
   },
+
+  // Background audio context
+  bgAudioManager: null,
 
   onLoad() {
     const quotes = app.globalData.quotes
     ApiConfig.load()
     this.setData({ quotes, showApiIcon: !ApiConfig.isConfigured() })
     this.showQuote()
+    this.loadComments()
+
+    // Initialize background audio manager
+    this.bgAudioManager = wx.getBackgroundAudioManager()
+    this.bgAudioManager.title = 'Glimmer 微光'
+    this.bgAudioManager.onPlay(() => {
+      console.log('背景音乐开始播放')
+    })
+    this.bgAudioManager.onPause(() => {
+      this.setData({ isPlaying: false })
+    })
+    this.bgAudioManager.onStop(() => {
+      this.setData({ isPlaying: false })
+    })
+    this.bgAudioManager.onError((err) => {
+      console.error('背景音乐播放错误:', err)
+      this.setData({ isPlaying: false })
+    })
 
     // Preload LLM quotes if configured
     if (ApiConfig.isConfigured()) {
       QuoteRouter.preloadQuotes(quotes, 3)
+    }
+  },
+
+  onUnload() {
+    // Stop music when page unloads
+    if (this.data.isPlaying && this.bgAudioManager) {
+      this.bgAudioManager.stop()
     }
   },
 
@@ -110,7 +152,10 @@ Page({
       isLiked: Store.isLikedPost(q.id) || false,
       isCaught: Store.isCaught(q.id),
       likeCount: this.getLikeCount(q.id),
-      categoryText
+      categoryText,
+      swipeOffset: 0,
+      swipeOpacity: 1,
+      showComments: false
     })
   },
 
@@ -141,30 +186,125 @@ Page({
 
   toggleMusic() {
     if (this.data.isPlaying) {
+      // Stop music
+      if (this.bgAudioManager) {
+        this.bgAudioManager.stop()
+      }
       this.setData({ isPlaying: false })
-      wx.showToast({ title: '已停止', icon: 'none' })
+      wx.showToast({ title: '音乐已停止', icon: 'none' })
     } else {
-      this.setData({ isPlaying: true })
-      wx.showToast({ title: '播放中', icon: 'none' })
+      // Play music - use a simple tone or ambient sound
+      // Since we don't have a real audio file, we'll use a placeholder
+      // In production, replace with actual ambient music URL
+      if (this.bgAudioManager) {
+        // You can replace this URL with your own ambient music
+        this.bgAudioManager.src = 'https://webapi-ssl.qq.com/cgi-bin/musicu-fcgi?cmd=Play&songid=002OdMkX0gKwKZ' // Placeholder
+        this.bgAudioManager.play().catch(() => {
+          wx.showToast({ title: '音乐播放需要音频资源', icon: 'none' })
+          this.setData({ isPlaying: false })
+        })
+        this.setData({ isPlaying: true })
+        wx.showToast({ title: '播放中（需配置音频URL）', icon: 'none' })
+      }
     }
   },
 
   toggleComment() {
-    wx.showToast({ title: '评论功能开发中', icon: 'none' })
+    const showComments = !this.data.showComments
+    this.setData({ showComments })
+    
+    if (showComments) {
+      this.loadComments()
+    }
+  },
+
+  // Load comments for current quote
+  loadComments() {
+    const quoteId = this.data.currentQuote.id
+    if (!quoteId) return
+    
+    const store = Store.get()
+    const comments = store.comments && store.comments[quoteId] ? store.comments[quoteId] : []
+    this.setData({ commentCount: comments.length, currentComments: comments })
+  },
+
+  // Submit a new comment
+  submitComment() {
+    const content = this.data.commentInput.trim()
+    if (!content) {
+      wx.showToast({ title: '请输入评论内容', icon: 'none' })
+      return
+    }
+
+    const quoteId = this.data.currentQuote.id
+    if (!quoteId) return
+
+    const store = Store.get()
+    if (!store.comments) store.comments = {}
+    if (!store.comments[quoteId]) store.comments[quoteId] = []
+
+    const newComment = {
+      id: 'c' + Date.now(),
+      content: content,
+      time: Date.now(),
+      user: app.globalData.user ? app.globalData.user.nickName : '微光用户'
+    }
+
+    store.comments[quoteId].push(newComment)
+    Store.save(store)
+
+    this.setData({
+      commentInput: '',
+      commentCount: store.comments[quoteId].length,
+      currentComments: store.comments[quoteId]
+    })
+
+    wx.showToast({ title: '评论成功' })
+  },
+
+  // Handle comment input
+  onCommentInput(e) {
+    this.setData({ commentInput: e.detail.value })
   },
 
   onTouchStart(e) {
-    this.setData({ startY: e.touches[0].clientY, isDragging: true })
+    this.setData({ 
+      startY: e.touches[0].clientY, 
+      isDragging: true,
+      swipeOffset: 0,
+      swipeOpacity: 1
+    })
   },
 
   onTouchMove(e) {
-    if (!this.data.isDragging) return
+    if (!this.data.isDragging || this.data.isLoading) return
+    
+    const currentY = e.touches[0].clientY
+    const diff = this.data.startY - currentY
+    const maxOffset = 200
+    
+    // Calculate swipe offset and opacity
+    let offset = diff
+    let opacity = 1 - Math.abs(diff) / (maxOffset * 1.5)
+    
+    // Clamp values
+    offset = Math.max(-maxOffset, Math.min(maxOffset, offset))
+    opacity = Math.max(0.3, Math.min(1, opacity))
+    
+    this.setData({
+      swipeOffset: offset,
+      swipeOpacity: opacity
+    })
   },
 
   async onTouchEnd(e) {
     if (!this.data.isDragging) return
     this.setData({ isDragging: false })
     const diff = this.data.startY - e.changedTouches[0].clientY
+    
+    // Reset swipe animation
+    this.setData({ swipeOffset: 0, swipeOpacity: 1 })
+    
     if (Math.abs(diff) > 40) {
       if (diff > 0) {
         await this.nextQuote()

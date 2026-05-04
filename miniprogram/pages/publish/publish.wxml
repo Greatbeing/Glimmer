@@ -1,6 +1,7 @@
 <view class="container">
   <view class="publish-card">
-    <textarea class="publish-textarea" placeholder="分享此刻的想法..." maxlength="500" value="{{content}}" bindinput="onInput"></textarea>
+    <textarea class="publish-textarea" placeholder="分享此刻的想法..." maxlength="{{maxChars}}" value="{{content}}" bindinput="onInput"></textarea>
+    <view class="char-count {{charCount > maxChars * 0.9 ? 'warning' : ''}} {{charCount >= maxChars ? 'error' : ''}}">{{charCount}} / {{maxChars}}</view>
     <view class="publish-footer">
       <view class="mood-tags">
         <view class="mood-tag {{selectedMood === '' ? 'active' : ''}}" data-mood="" bindtap="selectMood">无</view>

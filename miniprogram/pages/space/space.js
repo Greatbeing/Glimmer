@@ -146,10 +146,35 @@ Page({
     }
   },
 
+  // 退出登录
+  handleLogout() {
+    wx.showModal({
+      title: '确认退出',
+      content: '退出登录后，本地数据将保留，但无法同步到云端',
+      success: (res) => {
+        if (res.confirm) {
+          auth.logout()
+          this.setData({
+            isLoggedIn: false,
+            user: {},
+            checkinStreak: 0,
+            hasCheckedInToday: false,
+            quotaUsed: 0,
+            quotaTotal: 100
+          })
+          wx.showToast({ title: '已退出登录', icon: 'success' })
+        }
+      }
+    })
+  },
+
   // 分享邀请
   shareInvite() {
-    const inviteCode = this.data.user.inviteCode
-    if (!inviteCode) return
+    const inviteCode = this.data.user?.inviteCode
+    if (!inviteCode) {
+      wx.showToast({ title: '请先登录后获取邀请码', icon: 'none' })
+      return
+    }
 
     wx.showShareMenu({
       withShareTicket: true,
@@ -168,14 +193,31 @@ Page({
 
   // 复制邀请码
   copyInviteCode() {
-    const inviteCode = this.data.user.inviteCode
-    if (!inviteCode) return
+    const inviteCode = this.data.user?.inviteCode
+    if (!inviteCode) {
+      wx.showToast({ title: '请先登录后获取邀请码', icon: 'none' })
+      return
+    }
 
     wx.setClipboardData({
       data: inviteCode,
       success: () => {
         wx.showToast({ title: '邀请码已复制', icon: 'success' })
       }
+    })
+  },
+
+  // 查看徽章详情
+  viewBadgeDetail(e) {
+    const { index } = e.currentTarget.dataset
+    const badge = this.data.badges[index]
+    if (!badge) return
+
+    wx.showModal({
+      title: badge.name,
+      content: `获得条件：${badge.condition}\n\n${badge.earned ? '已获得 ✓' : '未获得'}`,
+      showCancel: false,
+      confirmText: '知道了'
     })
   },
 
