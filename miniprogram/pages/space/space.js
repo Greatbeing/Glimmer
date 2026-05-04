@@ -1,17 +1,21 @@
 const { ApiConfig, QuotaManager } = require('../../utils/quoteService')
 const Store = require('../../utils/store')
+const auth = require('../../utils/auth')
 
 // Constants
 const API_TIMEOUT = 5000
 
 Page({
   data: {
+    isLoggedIn: false,
+    user: {},
     activeTab: 'caught',
     caught: [],
     posts: [],
     caughtCount: 0,
     postCount: 0,
     likeCount: 0,
+    checkinStreak: 0,
     // API Settings
     showSettings: false,
     apiKeyInput: '',
@@ -20,12 +24,95 @@ Page({
     modelIndex: 0,
     apiUrlInput: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     quotaUsed: 0,
+    quotaTotal: 100,
     saving: false
   },
 
-  onShow() {
-    this.loadData()
+  async onShow() {
+    // 更新登录状态
+    const user = auth.getUser()
+    const isLoggedIn = auth.isLoggedIn()
+
+    this.setData({
+      isLoggedIn,
+      user,
+      checkinStreak: user.stats?.checkinStreak || 0,
+      quotaUsed: user.llmQuota?.used || 0,
+      quotaTotal: (user.llmQuota?.base || 100) + (user.llmQuota?.bonus || 0)
+    })
+
+    if (isLoggedIn) {
+      this.loadData()
+    }
     this.loadApiConfig()
+  },
+
+  // 微信授权登录
+  async handleLogin() {
+    wx.showLoading({ title: '登录中...' })
+
+    const result = await auth.wxLogin()
+
+    wx.hideLoading()
+
+    if (result.success) {
+      wx.showToast({ title: '登录成功', icon: 'success' })
+
+      // 更新页面状态
+      this.setData({
+        isLoggedIn: true,
+        user: result.user,
+        checkinStreak: result.user.stats?.checkinStreak || 0,
+        quotaUsed: result.user.llmQuota?.used || 0,
+        quotaTotal: (result.user.llmQuota?.base || 100) + (result.user.llmQuota?.bonus || 0)
+      })
+
+      // 更新全局数据
+      const app = getApp()
+      app.globalData.user = result.user
+
+      this.loadData()
+    } else {
+      wx.showToast({ title: result.error || '登录失败', icon: 'none' })
+    }
+  },
+
+  // 分享邀请
+  shareInvite() {
+    const inviteCode = this.data.user.inviteCode
+    if (!inviteCode) return
+
+    wx.showShareMenu({
+      withShareTicket: true,
+      menus: ['shareAppMessage', 'shareTimeline']
+    })
+
+    // 设置分享配置
+    this._shareData = {
+      title: '邀请你使用 Glimmer 微光',
+      path: `/pages/index/index?invite=${inviteCode}`,
+      imageUrl: ''
+    }
+
+    wx.showToast({ title: '点击右上角分享', icon: 'none' })
+  },
+
+  // 复制邀请码
+  copyInviteCode() {
+    const inviteCode = this.data.user.inviteCode
+    if (!inviteCode) return
+
+    wx.setClipboardData({
+      data: inviteCode,
+      success: () => {
+        wx.showToast({ title: '邀请码已复制', icon: 'success' })
+      }
+    })
+  },
+
+  // 显示签到
+  showCheckin() {
+    wx.showToast({ title: `已连续打卡 ${this.data.checkinStreak} 天`, icon: 'none' })
   },
 
   // API Settings
@@ -109,7 +196,6 @@ Page({
       })
 
       wx.setStorageSync('glimmer_api_setup_done', '1')
-      // Sync with ApiConfig module to ensure in-memory state is updated
       ApiConfig.save({ key, model, baseUrl })
       wx.showToast({ title: '验证成功', icon: 'success' })
       this.setData({ showSettings: false })

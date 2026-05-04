@@ -1,10 +1,83 @@
 .container {
-  padding: 16px;
-  padding-bottom: 80px;
+  padding: 12px;
+  padding-bottom: 88px;
   background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%);
   min-height: 100vh;
 }
 
+/* ====== 登录页面 ====== */
+.login-section {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+}
+
+.login-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1rpx solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 40px 30px;
+  text-align: center;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 320px;
+}
+
+.login-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.05); }
+}
+
+.login-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #fef3c7;
+  display: block;
+  margin-bottom: 10px;
+}
+
+.login-desc {
+  font-size: 14px;
+  color: #9ca3af;
+  display: block;
+  margin-bottom: 30px;
+  line-height: 1.6;
+}
+
+.login-btn {
+  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 14px 30px !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  color: #fff !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3) !important;
+}
+
+.login-btn-icon {
+  font-size: 20px;
+}
+
+.login-hint {
+  font-size: 12px;
+  color: #6b7280;
+  display: block;
+  margin-top: 16px;
+}
+
+/* ====== Header ====== */
 .space-header {
   background: rgba(255, 255, 255, 0.05);
   border: 1rpx solid rgba(255, 255, 255, 0.1);
@@ -28,11 +101,23 @@
   font-size: 24px;
   color: #fff;
   box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+  overflow: hidden;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
 }
 
 .user-info { display: flex; flex-direction: column; }
 .space-name { font-size: 18px; font-weight: 700; color: #fef3c7; }
 .space-desc { font-size: 12px; color: #9ca3af; margin-top: 4px; }
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
 
 .stats-bar {
   display: flex;
@@ -74,6 +159,69 @@
   margin-top: 4px;
 }
 
+/* ====== 邀请卡片 ====== */
+.invite-card {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.1));
+  border: 1rpx solid rgba(245, 158, 11, 0.25);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+
+.invite-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.invite-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fef3c7;
+}
+
+.invite-code {
+  font-size: 18px;
+  font-weight: 800;
+  color: #fbbf24;
+  letter-spacing: 2px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 6px 12px;
+  border-radius: 8px;
+}
+
+.invite-desc {
+  font-size: 13px;
+  color: #9ca3af;
+  display: block;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.invite-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.invite-btn {
+  flex: 1;
+  background: #f59e0b !important;
+  border: none !important;
+  border-radius: 10px !important;
+  padding: 10px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: #fff !important;
+}
+
+.invite-btn.secondary {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #d1d5db !important;
+}
+
+/* ====== Tabs ====== */
 .tabs {
   display: flex;
   background: rgba(255, 255, 255, 0.05);
@@ -208,7 +356,6 @@
   align-items: center;
   justify-content: center;
   font-size: 18px;
-  margin-left: auto;
 }
 
 /* Settings Modal */

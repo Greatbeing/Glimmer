@@ -1,6 +1,7 @@
 const app = getApp()
 const { ApiConfig, QuotaManager, QuoteCache, QuoteRouter } = require('../../utils/quoteService')
 const Store = require('../../utils/store')
+const shareCardGenerator = require('../../utils/shareCard')
 
 // Constants
 const LIKE_COUNT_BASE = 50
@@ -20,7 +21,9 @@ Page({
     isLoading: false,
     showApiIcon: false,
     loadingText: '',
-    categoryText: ''
+    categoryText: '',
+    canvasWidth: 600,
+    canvasHeight: 800
   },
 
   onLoad() {
@@ -33,6 +36,59 @@ Page({
     if (ApiConfig.isConfigured()) {
       QuoteRouter.preloadQuotes(quotes, 3)
     }
+  },
+
+  // 分享语录
+  async shareQuote() {
+    wx.showLoading({ title: '生成卡片...' })
+
+    try {
+      const quote = this.data.currentQuote
+      const user = app.globalData.user || {}
+
+      const imagePath = await shareCardGenerator.generateQuoteCard(quote, user, {
+        mode: 'portrait',
+        showQRCode: true
+      })
+
+      wx.hideLoading()
+
+      // 显示分享选项
+      wx.showActionSheet({
+        itemList: ['分享给好友', '保存到相册'],
+        success: async (res) => {
+          if (res.tapIndex === 0) {
+            // 分享给好友
+            wx.shareAppMessage({
+              title: `${quote.zh.substring(0, 30)}...`,
+              imageUrl: imagePath,
+              path: `/pages/index/index?quoteId=${quote.id}`
+            })
+          } else if (res.tapIndex === 1) {
+            // 保存到相册
+            await shareCardGenerator.saveToAlbum(imagePath)
+          }
+        }
+      })
+    } catch (error) {
+      wx.hideLoading()
+      console.error('生成分享卡片失败:', error)
+      // 降级：分享纯文本
+      this._shareTextFallback()
+    }
+  },
+
+  // 降级文本分享
+  _shareTextFallback() {
+    const quote = this.data.currentQuote
+    const text = `"${quote.zh}"\n\n——《${quote.source}》 ${quote.tag || ''}\n\n来自 Glimmer 微光`
+
+    wx.setClipboardData({
+      data: text,
+      success: () => {
+        wx.showToast({ title: '已复制，请粘贴分享', icon: 'none' })
+      }
+    })
   },
 
   // Deterministic like count based on quote ID

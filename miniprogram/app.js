@@ -1,3 +1,5 @@
+const auth = require('./utils/auth')
+
 App({
   globalData: {
     quotes: [
@@ -40,6 +42,57 @@ App({
       { id: 'q28', zh: '成功不是终点，失败不是末日，唯有勇气才是永恒。', en: 'Success is not final, failure is not fatal: it is the courage to continue that counts.', source: '演讲集', author: '丘吉尔', context: '二战最黑暗时期对英国人民的鼓舞', tag: '#勇气', category: 'literature', badge: '晨曦之光' },
       { id: 'q29', zh: '做你自己，因为别人都有人做了。', en: 'Be yourself; everyone else is already taken.', source: '自传', author: '奥斯卡·王尔德', context: '独特性是最珍贵的品质', tag: '#自我', category: 'literature', badge: '晨曦之光' },
       { id: 'q30', zh: '种一棵树最好的时间是十年前，其次是现在。', en: 'The best time to plant a tree was ten years ago. The second best time is now.', source: '非洲谚语', author: '佚名', context: '行动永远不晚，此刻就是最好的开始', tag: '#行动', category: 'literature', badge: '晨曦之光' }
-    ]
+    ],
+    user: null
+  },
+
+  async onLaunch(options) {
+    // 初始化云开发环境
+    try {
+      wx.cloud.init({
+        env: wx.cloud.DYNAMIC_ENV_ID || 'glimmer-prod',
+        traceUser: true
+      })
+      console.log('云开发初始化成功')
+    } catch (error) {
+      console.warn('云开发初始化失败，将以本地模式运行:', error)
+    }
+
+    // 处理邀请码参数
+    if (options.query && options.query.invite) {
+      auth.handleInviteCode(options.query.invite)
+    }
+
+    // 初始化用户认证
+    const user = await auth.init()
+    this.globalData.user = user
+
+    // 恢复本地存储数据
+    this.restoreLocalData()
+  },
+
+  onShow(options) {
+    // 处理从分享卡片进入的情况
+    if (options.query && options.query.invite) {
+      auth.handleInviteCode(options.query.invite)
+    }
+
+    // 更新全局用户状态
+    this.globalData.user = auth.getUser()
+  },
+
+  restoreLocalData() {
+    const Store = require('./utils/store')
+    const store = Store.get()
+
+    if (store.likedQuotes) {
+      this.globalData.likedQuotes = store.likedQuotes
+    }
+    if (store.caughtQuotes) {
+      this.globalData.caughtQuotes = store.caughtQuotes
+    }
+    if (store.posts) {
+      this.globalData.posts = store.posts
+    }
   }
 })

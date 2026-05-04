@@ -55,6 +55,10 @@
             <text class="action-icon">💬</text>
             <text class="action-count">0</text>
           </view>
+          <view class="action-btn" bindtap="shareQuote">
+            <text class="action-icon">↗</text>
+            <text class="action-count">分享</text>
+          </view>
         </view>
         <view class="capture-btn {{isCaught ? 'caught' : ''}}" bindtap="catchQuote">
           <text class="capture-icon">📷</text>
@@ -63,5 +67,8 @@
       </view>
     </view>
   </view>
+
+  <!-- 隐藏的 Canvas 用于生成分享卡片 -->
+  <canvas canvas-id="shareCanvas" style="width:{{canvasWidth}}px;height:{{canvasHeight}}px;position:fixed;left:-9999px;top:-9999px;"></canvas>
 
 </view>
