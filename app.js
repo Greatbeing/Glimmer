@@ -581,55 +581,136 @@
     elements.musicBtn.addEventListener('click', toggleMusic);
   }
 
-  // 音乐播放
+  // 音乐播放 - 环境音乐生成器
   function toggleMusic() {
     if (state.isPlaying) {
       stopMusic();
     } else {
-      playMusic();
+      playAmbientMusic();
     }
   }
 
-  function playMusic() {
+  // 环境和弦进行
+  const AMBIENT_CHORDS = [
+    [261.63, 329.63, 392.00], // C major
+    [293.66, 369.99, 440.00], // D major
+    [329.63, 415.30, 493.88], // E major
+    [349.23, 440.00, 523.25], // F major
+    [392.00, 493.88, 587.33], // G major
+    [440.00, 554.37, 659.25], // A major
+  ];
+
+  let ambientInterval = null;
+  let currentChordIndex = 0;
+
+  function playAmbientMusic() {
     if (!state.audioCtx) {
       state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
 
-    const q = QUOTES[state.currentIndex];
-    const tones = MUSIC_TONES[q.tag] || MUSIC_TONES.default;
-
-    tones.forEach((freq, i) => {
-      const osc = state.audioCtx.createOscillator();
-      const gain = state.audioCtx.createGain();
-
-      osc.type = 'sine';
-      osc.frequency.value = freq;
-      gain.gain.value = 0.05;
-
-      osc.connect(gain);
-      gain.connect(state.audioCtx.destination);
-      osc.start();
-
-      state.currentOscillators = state.currentOscillators || [];
-      state.currentOscillators.push({ osc, gain });
-    });
-
     state.isPlaying = true;
     elements.musicBtn.style.color = 'var(--amber-300)';
     showToast('播放中');
+
+    // 播放第一个和弦
+    playChord(AMBIENT_CHORDS[currentChordIndex]);
+
+    // 每4秒切换和弦
+    ambientInterval = setInterval(() => {
+      stopCurrentChord();
+      currentChordIndex = (currentChordIndex + 1) % AMBIENT_CHORDS.length;
+      playChord(AMBIENT_CHORDS[currentChordIndex]);
+    }, 4000);
+  }
+
+  function playChord(frequencies) {
+    const ctx = state.audioCtx;
+    state.currentOscillators = [];
+
+    // 创建混响效果（使用延迟模拟）
+    const masterGain = ctx.createGain();
+    masterGain.gain.value = 0;
+    masterGain.gain.setValueAtTime(0, ctx.currentTime);
+    masterGain.gain.linearRampToValueAtTime(0.08, ctx.currentTime + 1.5);
+    masterGain.connect(ctx.destination);
+
+    // 为每个频率创建振荡器
+    frequencies.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+
+      // 添加轻微颤音
+      const lfo = ctx.createOscillator();
+      const lfoGain = ctx.createGain();
+      lfo.frequency.value = 0.5 + i * 0.3;
+      lfoGain.gain.value = 2;
+      lfo.connect(lfoGain);
+      lfoGain.connect(osc.frequency);
+      lfo.start();
+
+      // 音量包络
+      gain.gain.value = 0;
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + 2);
+
+      osc.connect(gain);
+      gain.connect(masterGain);
+      osc.start();
+
+      state.currentOscillators.push({ osc, gain, lfo });
+    });
+
+    // 添加低音
+    const bassOsc = ctx.createOscillator();
+    const bassGain = ctx.createGain();
+    bassOsc.type = 'sine';
+    bassOsc.frequency.value = frequencies[0] / 2;
+    bassGain.gain.value = 0;
+    bassGain.gain.setValueAtTime(0, ctx.currentTime);
+    bassGain.gain.linearRampToValueAtTime(0.06, ctx.currentTime + 2);
+    bassOsc.connect(bassGain);
+    bassGain.connect(masterGain);
+    bassOsc.start();
+    state.currentOscillators.push({ osc: bassOsc, gain: bassGain });
+  }
+
+  function stopCurrentChord() {
+    const ctx = state.audioCtx;
+    if (!ctx || !state.currentOscillators) return;
+
+    // 淡出
+    state.currentOscillators.forEach(({ osc, gain }) => {
+      if (gain) {
+        gain.gain.cancelScheduledValues(ctx.currentTime);
+        gain.gain.setValueAtTime(gain.gain.value, ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 1);
+      }
+    });
+
+    setTimeout(() => {
+      state.currentOscillators.forEach(({ osc, lfo }) => {
+        try {
+          osc.stop();
+          if (lfo) lfo.stop();
+        } catch (e) {}
+      });
+      state.currentOscillators = [];
+    }, 1200);
   }
 
   function stopMusic() {
-    if (state.currentOscillators) {
-      state.currentOscillators.forEach(({ osc, gain }) => {
-        gain.gain.exponentialRampToValueAtTime(0.001, state.audioCtx.currentTime + 0.1);
-        setTimeout(() => osc.stop(), 200);
-      });
-      state.currentOscillators = [];
-    }
-
     state.isPlaying = false;
     elements.musicBtn.style.color = '';
+
+    if (ambientInterval) {
+      clearInterval(ambientInterval);
+      ambientInterval = null;
+    }
+
+    stopCurrentChord();
     showToast('已停止');
   }
 
