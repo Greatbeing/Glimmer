@@ -177,4 +177,5 @@
 
 # Build artifacts
 *.apk
+!releases/*.apk
 *.aab
