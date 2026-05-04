@@ -39,13 +39,15 @@ Page({
     const isLoggedIn = auth.isLoggedIn()
 
     // 检查今天是否已签到
-    const hasCheckedInToday = checkinManager._getToday() === (Store.get().checkins || []).slice(-1)[0]?.date
+    const store = Store.get()
+    const today = checkinManager._getToday()
+    const todayCheckin = (store.checkins || []).find(c => c.date === today)
 
     this.setData({
       isLoggedIn,
       user,
       checkinStreak: user.stats?.checkinStreak || 0,
-      hasCheckedInToday,
+      hasCheckedInToday: !!todayCheckin,
       quotaUsed: user.llmQuota?.used || 0,
       quotaTotal: (user.llmQuota?.base || 100) + (user.llmQuota?.bonus || 0)
     })
@@ -76,7 +78,7 @@ Page({
     }
 
     // 本地签到
-    const result = checkinManager.doCheckin()
+    const result = await checkinManager.doCheckin()
 
     if (result.success) {
       this.setData({

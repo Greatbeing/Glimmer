@@ -50,7 +50,6 @@ App({
     // 初始化云开发环境
     try {
       wx.cloud.init({
-        env: wx.cloud.DYNAMIC_ENV_ID || 'glimmer-prod',
         traceUser: true
       })
       console.log('云开发初始化成功')

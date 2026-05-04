@@ -121,12 +121,11 @@ class ShareCardGenerator {
     if (quote.en) {
       const enLines = this._wrapText(ctx, quote.en, 16, maxWidth)
       ctx.setFillStyle('#9ca3af')
-      ctx.setFontSize(16)
-      ctx.setFontStyle('italic')
+      ctx.setFontSize(14)
 
       for (const line of enLines) {
         ctx.fillText(line, padding + 12, y)
-        y += 24
+        y += 22
       }
     }
 
@@ -253,7 +252,6 @@ class ShareCardGenerator {
 
     ctx.setFillStyle('#fbbf24')
     ctx.setFontSize(48)
-    ctx.setFontWeight('bold')
     ctx.fillText(inviteCode, this.cardWidth / 2, y + 15)
     y += 80
 
@@ -306,8 +304,12 @@ class ShareCardGenerator {
   // 辅助方法：测量文字宽度
   _measureText(ctx, text, fontSize) {
     ctx.setFontSize(fontSize)
-    const metrics = ctx.measureText(text)
-    return metrics ? metrics.width : text.length * fontSize
+    try {
+      const metrics = ctx.measureText(text)
+      return metrics ? metrics.width : text.length * fontSize * 0.6
+    } catch (e) {
+      return text.length * fontSize * 0.6
+    }
   }
 
   // 辅助方法：文字换行
