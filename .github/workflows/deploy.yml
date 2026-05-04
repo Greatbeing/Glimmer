@@ -27,10 +27,22 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
+      - name: Prepare deployment files
+        run: |
+          mkdir -p dist
+          cp index.html dist/
+          cp manifest.json dist/
+          cp sw.js dist/
+          cp icon-192.png dist/
+          cp icon-512.png dist/
+          cp .nojekyll dist/
+          cp README.md dist/
+          cp -r www/ dist/www/
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          path: 'dist'
 
       - name: Deploy to GitHub Pages
         id: deployment
