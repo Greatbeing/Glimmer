@@ -134,8 +134,8 @@
       flex: 1;
       overflow-y: auto;
       position: relative;
-      padding: 16px;
-      padding-bottom: 96px;
+      padding: 8px;
+      padding-bottom: 80px;
       scrollbar-width: none;
     }
 
@@ -144,15 +144,15 @@
     .page {
       position: absolute;
       inset: 0;
-      padding: 16px;
-      padding-bottom: 96px;
+      padding: 8px;
+      padding-bottom: 80px;
       overflow-y: auto;
       display: none;
       scrollbar-width: none;
     }
 
     .page::-webkit-scrollbar { display: none; }
-    .page.active { display: flex; flex-direction: column; }
+    .page.active { display: flex; flex-direction: column; justify-content: center; }
 
     /* ====== Quote Card ====== */
     .quote-card {
@@ -378,28 +378,6 @@
     }
 
     .comment-send:hover { background: var(--amber-600); }
-
-    /* Pagination Dots */
-    .quote-dots {
-      display: flex;
-      justify-content: center;
-      gap: 8px;
-      margin-top: 24px;
-    }
-
-    .quote-dots span {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.2);
-      transition: all 0.3s ease;
-    }
-
-    .quote-dots span.active {
-      background: var(--amber-400);
-      width: 24px;
-      border-radius: 4px;
-    }
 
     /* Card Loading Overlay */
     .card-loading {
@@ -1083,16 +1061,7 @@
       <section class="page active" id="pageRecommend">
         <div class="quote-card glass" id="quoteCard">
           <div class="quote-inner">
-            <!-- Loading overlay -->
-            <div class="card-loading" id="cardLoading" style="display:none;">
-              <div class="loading-spinner"></div>
-              <span>正在寻找下一条微光...</span>
-            </div>
-            <div class="quote-badge" id="quoteBadge">
-              <svg viewBox="0 0 576 512"><path d="M178.2-10.1c7.4-3.1 15.8-2.2 22.5 2.2l87.8 58.2 87.8-58.2c6.7-4.4 15.1-5.2 22.5-2.2S411.4-.5 413 7.3l20.9 103.2 103.2 20.9c7.8 1.6 14.4 7 17.4 14.3s2.2 15.8-2.2 22.5l-58.2 87.8 58.2 87.8c4.4 6.7 5.2 15.1 2.2 22.5s-9.6 12.8-17.4 14.3L433.8 401.4 413 504.7c-1.6 7.8-7 14.4-14.3 17.4s-15.8 2.2-22.5-2.2l-87.8-58.2-87.8 58.2c-6.7 4.4-15.1 5.2-22.5 2.2s-12.8-9.6-14.3-17.4L143 401.4 39.7 380.5c-7.8-1.6-14.4-7-17.4-14.3s-2.2-15.8 2.2-22.5L82.7 256 24.5 168.2c-4.4-6.7-5.2-15.1-2.2-22.5s9.6-12.8 17.4-14.3L143 110.6 163.9 7.3c1.6-7.8 7-14.4 14.3-17.4zM207.6 256a80.4 80.4 0 1 1 160.8 0 80.4 80.4 0 1 1 -160.8 0zm208.8 0a128.4 128.4 0 1 0 -256.8 0 128.4 128.4 0 1 0 256.8 0z"/></svg>
-              <span id="badgeText">晨曦之光</span>
-              <div class="quote-wave"><span></span><span></span><span></span></div>
-            </div>
+            <div class="quote-badge" id="badgeText">晨曦之光</div>
             <div class="quote-content">
               <div class="quote-zh" id="quoteZh">加载中...</div>
               <div class="quote-en" id="quoteEn"></div>
@@ -1123,8 +1092,12 @@
               </div>
             </div>
           </div>
+          <!-- Card Loading -->
+          <div class="card-loading" id="cardLoading" style="display:none;">
+            <div class="loading-spinner"></div>
+            <div class="loading-text" id="loadingText">正在寻找下一条微光...</div>
+          </div>
         </div>
-        <div class="quote-dots" id="quoteDots"></div>
       </section>
 
       <!-- Publish Page -->
@@ -1509,19 +1482,6 @@ function renderQuote(direction) {
   const liked = store.isLikedQuote(q.id);
   document.getElementById('likeBtn').classList.toggle('liked', liked);
   document.getElementById('catchBtn').classList.toggle('caught', store.isCaught(q.id));
-
-  // Dots - limit to max visible dots
-  const dots = document.getElementById('quoteDots');
-  const totalQuotes = quotes.length;
-  const maxDots = QUOTE_CONSTANTS.MAX_VISIBLE_DOTS;
-  
-  if (totalQuotes <= maxDots) {
-    dots.innerHTML = quotes.map((_, i) => `<span class="${i === currentIndex ? 'active' : ''}"></span>`).join('');
-  } else {
-    // Show relative position
-    const progress = ((currentIndex + 1) / totalQuotes * 100).toFixed(0);
-    dots.innerHTML = `<span style="color: var(--text-muted); font-size: 12px;">${currentIndex + 1} / ${totalQuotes} (${progress}%)</span>`;
-  }
 
   // Comment area hidden
   document.getElementById('commentArea').classList.remove('show');
