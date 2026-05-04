@@ -577,8 +577,8 @@
       });
     });
 
-    // 音乐按钮 - 已禁用
-    // elements.musicBtn.addEventListener('click', toggleMusic);
+    // 音乐按钮
+    elements.musicBtn.addEventListener('click', toggleMusic);
   }
 
   // 音乐播放 - 巴赫G大调大提琴合成器
@@ -632,8 +632,146 @@
     { freq: 196.00, dur: 1.0 },  // G3
   ];
 
+  // 音乐播放 - 宁静氛围音乐
+  let musicInterval = null;
+  let activeNodes = [];
+
   function toggleMusic() {
-    showToast('背景音乐功能已移除');
+    if (state.isPlaying) {
+      stopMusic();
+    } else {
+      playAmbientMusic();
+    }
+  }
+
+  function playAmbientMusic() {
+    if (!state.audioCtx) {
+      state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    // 恢复音频上下文（浏览器策略要求）
+    state.audioCtx.resume().then(() => {
+      state.isPlaying = true;
+      elements.musicBtn.style.color = 'var(--amber-300)';
+      showToast('播放中 - 宁静氛围');
+
+      // 立即播放
+      playChord(0);
+
+      // 每6秒切换
+      musicInterval = setInterval(() => {
+        const next = (activeChord + 1) % CHORDS.length;
+        fadeAndPlay(next);
+      }, 6000);
+    }).catch(err => {
+      console.error('音频上下文恢复失败:', err);
+      showToast('音乐播放失败');
+    });
+  }
+
+  // 和弦定义 - 适合阅读的宁静音乐
+  const CHORDS = [
+    [261.63, 329.63, 392.00], // C大调
+    [220.00, 261.63, 329.63], // A小调
+    [174.61, 220.00, 261.63], // F大调
+    [196.00, 246.94, 293.66], // G大调
+  ];
+  let activeChord = 0;
+
+  function playChord(index) {
+    const ctx = state.audioCtx;
+    if (!ctx) return;
+
+    activeChord = index;
+    const now = ctx.currentTime;
+    const freqs = CHORDS[index];
+
+    // 清理旧节点
+    activeNodes.forEach(({ osc, gain }) => {
+      try {
+        gain.gain.setValueAtTime(gain.gain.value, now);
+        gain.gain.linearRampToValueAtTime(0, now + 0.5);
+        osc.stop(now + 0.6);
+      } catch(e) {}
+    });
+    activeNodes = [];
+
+    // 主和弦
+    freqs.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.06, now + 1.5);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+
+      activeNodes.push({ osc, gain });
+    });
+
+    // 低音
+    const bass = ctx.createOscillator();
+    const bassGain = ctx.createGain();
+    bass.type = 'sine';
+    bass.frequency.value = freqs[0] / 2;
+    bassGain.gain.setValueAtTime(0, now);
+    bassGain.gain.linearRampToValueAtTime(0.04, now + 2);
+    bass.connect(bassGain);
+    bassGain.connect(ctx.destination);
+    bass.start(now);
+    activeNodes.push({ osc: bass, gain: bassGain });
+  }
+
+  function fadeAndPlay(index) {
+    if (!state.isPlaying) return;
+    
+    const ctx = state.audioCtx;
+    const now = ctx.currentTime;
+    
+    // 淡出
+    activeNodes.forEach(({ gain }) => {
+      try {
+        gain.gain.cancelScheduledValues(now);
+        gain.gain.setValueAtTime(gain.gain.value, now);
+        gain.gain.linearRampToValueAtTime(0, now + 1);
+      } catch(e) {}
+    });
+
+    // 延迟播放新和弦
+    setTimeout(() => {
+      if (state.isPlaying) {
+        playChord(index);
+      }
+    }, 1200);
+  }
+
+  function stopMusic() {
+    state.isPlaying = false;
+    elements.musicBtn.style.color = '';
+
+    if (musicInterval) {
+      clearInterval(musicInterval);
+      musicInterval = null;
+    }
+
+    // 淡出
+    if (state.audioCtx) {
+      const now = state.audioCtx.currentTime;
+      activeNodes.forEach(({ gain }) => {
+        try {
+          gain.gain.cancelScheduledValues(now);
+          gain.gain.setValueAtTime(gain.gain.value, now);
+          gain.gain.linearRampToValueAtTime(0, now + 0.5);
+        } catch(e) {}
+      });
+    }
+    
+    showToast('已停止');
   }
 
   function playCelloMusic() {
