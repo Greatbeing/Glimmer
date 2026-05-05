@@ -7,6 +7,7 @@
     currentIndex: 0,
     isDragging: false,
     startY: 0,
+    startX: 0,
     swipeOffset: 0,
     isPageTransitioning: false,
     currentPage: 'Recommend',
@@ -98,7 +99,18 @@
       posts: state.posts,
       comments: state.comments
     };
-    localStorage.setItem('glimmer_data', JSON.stringify(data));
+    try {
+      localStorage.setItem('glimmer_data', JSON.stringify(data));
+    } catch (e) {
+      if (e.name === 'QuotaExceededError') {
+        console.warn('localStorage配额已满，清理旧数据');
+        // 保留最近50条帖子
+        if (state.posts.length > 50) {
+          state.posts = state.posts.slice(0, 50);
+          saveData();
+        }
+      }
+    }
   }
 
   // 渲染语录
@@ -381,15 +393,22 @@
     const totalLikes = state.posts.reduce((sum, p) => sum + (p.likes || 0), 0);
     elements.likeTotal.textContent = totalLikes;
 
-    // 渲染捕捉列表
-    renderCaughtList();
-    renderSpacePostsList();
+    const activeTab = document.querySelector('#pageSpace .tab-btn.active')?.dataset.tab || 'caught';
+    
+    if (activeTab === 'caught') {
+      renderCaughtList();
+      elements.spacePostsList.style.display = 'none';
+    } else {
+      renderSpacePostsList();
+      elements.caughtList.style.display = 'none';
+    }
   }
 
   // 渲染捕捉列表
   function renderCaughtList() {
     const list = elements.caughtList;
     list.innerHTML = '';
+    list.style.display = 'block';
 
     if (state.caughtQuotes.size === 0) {
       elements.emptySpace.style.display = 'block';
@@ -418,10 +437,14 @@
   function renderSpacePostsList() {
     const list = elements.spacePostsList;
     list.innerHTML = '';
+    list.style.display = 'block';
 
     if (state.posts.length === 0) {
+      elements.emptySpace.style.display = 'block';
       return;
     }
+
+    elements.emptySpace.style.display = 'none';
 
     state.posts.forEach(post => {
       const el = document.createElement('div');
@@ -480,16 +503,23 @@
     card.addEventListener('touchstart', (e) => {
       state.isDragging = true;
       state.startY = e.touches[0].clientY;
+      state.startX = e.touches[0].clientX;
       card.style.transition = 'none';
     }, { passive: true });
 
     card.addEventListener('touchmove', (e) => {
       if (!state.isDragging) return;
-      const diff = state.startY - e.touches[0].clientY;
-      state.swipeOffset = diff;
+      
+      const diffY = state.startY - e.touches[0].clientY;
+      const diffX = Math.abs(state.startX - e.touches[0].clientX);
+      
+      // 如果水平滑动大于垂直滑动，不处理（可能是页面滚动）
+      if (diffX > Math.abs(diffY)) return;
+      
+      state.swipeOffset = diffY;
 
       const maxOffset = 200;
-      const clampedOffset = Math.max(-maxOffset, Math.min(maxOffset, diff));
+      const clampedOffset = Math.max(-maxOffset, Math.min(maxOffset, diffY));
       const opacity = 1 - Math.abs(clampedOffset) / (maxOffset * 1.5);
 
       card.style.transform = `translateY(${clampedOffset}px)`;
@@ -505,7 +535,8 @@
       card.style.opacity = '';
 
       const diff = state.swipeOffset;
-      if (Math.abs(diff) > 50) {
+      // 提高滑动阈值到60px，避免误触发
+      if (Math.abs(diff) > 60) {
         navigateQuote(diff > 0 ? 'next' : 'prev');
       }
       state.swipeOffset = 0;
@@ -579,62 +610,25 @@
 
     // 音乐按钮
     elements.musicBtn.addEventListener('click', toggleMusic);
+
+    // 设置按钮
+    elements.settingsBtn.addEventListener('click', () => {
+      showToast('设置功能开发中');
+    });
   }
-
-  // 音乐播放 - 巴赫G大调大提琴合成器
-  let bgAudio = null;
-  let celloTimeout = null;
-  let melodyInterval = null;
-  let noteIndex = 0;
-
-  // 巴赫G大调大提琴组曲第1号前奏曲旋律片段 (简化版)
-  const BACH_MELODY = [
-    // 前奏曲主旋律 - G大调音阶琶音
-    { freq: 196.00, dur: 0.8 },  // G3
-    { freq: 246.94, dur: 0.6 },  // B3
-    { freq: 293.66, dur: 0.4 },  // D4
-    { freq: 349.23, dur: 0.8 },  // F4
-    { freq: 392.00, dur: 0.4 },  // G4
-    { freq: 440.00, dur: 0.6 },  // A4
-    { freq: 493.88, dur: 0.4 },  // B4
-    { freq: 523.25, dur: 0.8 },  // C5
-    { freq: 493.88, dur: 0.4 },  // B4
-    { freq: 440.00, dur: 0.6 },  // A4
-    { freq: 392.00, dur: 0.8 },  // G4
-    { freq: 349.23, dur: 0.4 },  // F4
-    { freq: 293.66, dur: 0.8 },  // D4
-    { freq: 246.94, dur: 0.6 },  // B3
-    { freq: 220.00, dur: 0.4 },  // A3
-    { freq: 196.00, dur: 1.2 },  // G3
-    // 下行音阶
-    { freq: 220.00, dur: 0.4 },
-    { freq: 246.94, dur: 0.4 },
-    { freq: 261.63, dur: 0.4 },
-    { freq: 293.66, dur: 0.4 },
-    { freq: 329.63, dur: 0.4 },
-    { freq: 349.23, dur: 0.4 },
-    { freq: 392.00, dur: 0.6 },
-    { freq: 440.00, dur: 0.4 },
-    { freq: 392.00, dur: 0.6 },
-    { freq: 329.63, dur: 0.4 },
-    { freq: 293.66, dur: 0.8 },
-    { freq: 246.94, dur: 0.6 },
-    { freq: 220.00, dur: 0.4 },
-    { freq: 196.00, dur: 1.0 },
-    // 持续音
-    { freq: 98.00,  dur: 1.5 },  // G2 低音持续
-    { freq: 196.00, dur: 0.5 },
-    { freq: 293.66, dur: 0.5 },
-    { freq: 392.00, dur: 0.5 },
-    { freq: 293.66, dur: 0.5 },
-    { freq: 196.00, dur: 0.5 },
-    { freq: 146.83, dur: 1.0 },  // D3
-    { freq: 196.00, dur: 1.0 },  // G3
-  ];
 
   // 音乐播放 - 宁静氛围音乐
   let musicInterval = null;
   let activeNodes = [];
+
+  // 和弦定义 - 适合阅读的宁静音乐
+  const CHORDS = [
+    [261.63, 329.63, 392.00], // C大调
+    [220.00, 261.63, 329.63], // A小调
+    [174.61, 220.00, 261.63], // F大调
+    [196.00, 246.94, 293.66], // G大调
+  ];
+  let activeChord = 0;
 
   function toggleMusic() {
     if (state.isPlaying) {
@@ -649,16 +643,14 @@
       state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
 
-    // 恢复音频上下文（浏览器策略要求）
     state.audioCtx.resume().then(() => {
       state.isPlaying = true;
+      activeChord = 0;
       elements.musicBtn.style.color = 'var(--amber-300)';
       showToast('播放中 - 宁静氛围');
 
-      // 立即播放
       playChord(0);
 
-      // 每6秒切换
       musicInterval = setInterval(() => {
         const next = (activeChord + 1) % CHORDS.length;
         fadeAndPlay(next);
@@ -669,15 +661,6 @@
     });
   }
 
-  // 和弦定义 - 适合阅读的宁静音乐
-  const CHORDS = [
-    [261.63, 329.63, 392.00], // C大调
-    [220.00, 261.63, 329.63], // A小调
-    [174.61, 220.00, 261.63], // F大调
-    [196.00, 246.94, 293.66], // G大调
-  ];
-  let activeChord = 0;
-
   function playChord(index) {
     const ctx = state.audioCtx;
     if (!ctx) return;
@@ -686,9 +669,9 @@
     const now = ctx.currentTime;
     const freqs = CHORDS[index];
 
-    // 清理旧节点
     activeNodes.forEach(({ osc, gain }) => {
       try {
+        gain.gain.cancelScheduledValues(now);
         gain.gain.setValueAtTime(gain.gain.value, now);
         gain.gain.linearRampToValueAtTime(0, now + 0.5);
         osc.stop(now + 0.6);
@@ -696,8 +679,7 @@
     });
     activeNodes = [];
 
-    // 主和弦
-    freqs.forEach((freq, i) => {
+    freqs.forEach((freq) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       
@@ -714,7 +696,6 @@
       activeNodes.push({ osc, gain });
     });
 
-    // 低音
     const bass = ctx.createOscillator();
     const bassGain = ctx.createGain();
     bass.type = 'sine';
@@ -733,7 +714,6 @@
     const ctx = state.audioCtx;
     const now = ctx.currentTime;
     
-    // 淡出
     activeNodes.forEach(({ gain }) => {
       try {
         gain.gain.cancelScheduledValues(now);
@@ -742,7 +722,6 @@
       } catch(e) {}
     });
 
-    // 延迟播放新和弦
     setTimeout(() => {
       if (state.isPlaying) {
         playChord(index);
@@ -759,7 +738,6 @@
       musicInterval = null;
     }
 
-    // 淡出
     if (state.audioCtx) {
       const now = state.audioCtx.currentTime;
       activeNodes.forEach(({ gain }) => {
@@ -771,119 +749,6 @@
       });
     }
     
-    showToast('已停止');
-  }
-
-  function playCelloMusic() {
-    if (!state.audioCtx) {
-      state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-
-    state.isPlaying = true;
-    noteIndex = 0;
-    elements.musicBtn.style.color = 'var(--amber-300)';
-    showToast('播放中 - 巴赫G大调大提琴组曲');
-
-    playNextNote();
-    
-    // 持续循环播放
-    melodyInterval = setInterval(() => {
-      if (state.isPlaying) {
-        playNextNote();
-      }
-    }, 800);
-  }
-
-  function playNextNote() {
-    const ctx = state.audioCtx;
-    if (!ctx) return;
-
-    const note = BACH_MELODY[noteIndex % BACH_MELODY.length];
-    noteIndex++;
-
-    // 创建大提琴音色
-    const now = ctx.currentTime;
-    const duration = note.dur;
-
-    // 主振荡器 - 模拟琴弦振动
-    const osc1 = ctx.createOscillator();
-    osc1.type = 'sawtooth';
-    osc1.frequency.value = note.freq;
-
-    // 谐波振荡器 - 增加泛音
-    const osc2 = ctx.createOscillator();
-    osc2.type = 'sine';
-    osc2.frequency.value = note.freq * 2;
-
-    // 第三谐波
-    const osc3 = ctx.createOscillator();
-    osc3.type = 'sine';
-    osc3.frequency.value = note.freq * 3;
-
-    // 琴体共鸣 - 低频共振
-    const osc4 = ctx.createOscillator();
-    osc4.type = 'sine';
-    osc4.frequency.value = note.freq * 0.5;
-
-    // 增益节点 - 音量包络
-    const gain1 = ctx.createGain();
-    gain1.gain.setValueAtTime(0, now);
-    gain1.gain.linearRampToValueAtTime(0.08, now + 0.1);  // 慢起弓
-    gain1.gain.linearRampToValueAtTime(0.06, now + duration * 0.5);
-    gain1.gain.linearRampToValueAtTime(0, now + duration);
-
-    const gain2 = ctx.createGain();
-    gain2.gain.value = 0.03;
-
-    const gain3 = ctx.createGain();
-    gain3.gain.value = 0.015;
-
-    const gain4 = ctx.createGain();
-    gain4.gain.value = 0.04;
-
-    // 颤音效果 (LFO)
-    const vibrato = ctx.createOscillator();
-    vibrato.frequency.value = 5.5;  // 大提琴颤音频率
-    const vibratoGain = ctx.createGain();
-    vibratoGain.gain.value = 3;  // 颤音深度
-    vibrato.connect(vibratoGain);
-    vibratoGain.connect(osc1.frequency);
-    vibratoGain.connect(osc2.frequency);
-
-    // 连接
-    osc1.connect(gain1);
-    osc2.connect(gain2);
-    gain2.connect(gain1);
-    osc3.connect(gain3);
-    gain3.connect(gain1);
-    osc4.connect(gain4);
-    gain4.connect(gain1);
-    gain1.connect(ctx.destination);
-
-    // 启动
-    osc1.start(now);
-    osc2.start(now);
-    osc3.start(now);
-    osc4.start(now);
-    vibrato.start(now);
-
-    // 停止
-    osc1.stop(now + duration);
-    osc2.stop(now + duration);
-    osc3.stop(now + duration);
-    osc4.stop(now + duration);
-    vibrato.stop(now + duration);
-  }
-
-  function stopMusic() {
-    state.isPlaying = false;
-    elements.musicBtn.style.color = '';
-
-    if (melodyInterval) {
-      clearInterval(melodyInterval);
-      melodyInterval = null;
-    }
-
     showToast('已停止');
   }
 
