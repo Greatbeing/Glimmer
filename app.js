@@ -2,22 +2,52 @@
 (() => {
   'use strict';
 
-  // 状态管理
+  // ====== 配置常量 ======
+  const CONFIG = {
+    PARTICLE_COUNT_MOBILE: 15,
+    PARTICLE_COUNT_DESKTOP: 25,
+    MAX_DOTS: 10,
+    SWIPE_THRESHOLD: 60,
+    WHEEL_SENSITIVITY: 30,
+    WHEEL_COOLDOWN: 800,
+    PAGE_TRANSITION_MS: 300,
+    MAX_POSTS_STORAGE: 50,
+    LIKE_BASE_COUNT: 50,
+    LIKE_RANDOM_RANGE: 300,
+    AMBIENT_CHORD_DURATION_MS: 6000,
+    AMBIENT_FADE_OUT_MS: 1200,
+    AMBIENT_ATTACK_S: 1.5,
+    AMBIENT_BASS_VOLUME: 0.04,
+    AMBIENT_NOTE_VOLUME: 0.06,
+    AMBIENT_RELEASE_S: 0.5
+  };
+
+  const HTML_ESCAPE_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+
+  // ====== 状态管理 ======
   const state = {
-    currentIndex: 0,
-    isDragging: false,
-    startY: 0,
-    startX: 0,
-    swipeOffset: 0,
-    isPageTransitioning: false,
-    currentPage: 'Recommend',
-    likedQuotes: new Set(),
-    caughtQuotes: new Set(),
-    posts: [],
-    comments: {},
-    isPlaying: false,
-    audioCtx: null,
-    wheelTimeout: null
+    ui: {
+      currentIndex: 0,
+      isDragging: false,
+      startY: 0,
+      startX: 0,
+      swipeOffset: 0,
+      isPageTransitioning: false,
+      currentPage: 'Recommend'
+    },
+    data: {
+      likedQuotes: new Set(),
+      caughtQuotes: new Set(),
+      posts: [],
+      comments: {}
+    },
+    audio: {
+      isPlaying: false,
+      audioCtx: null,
+      wheelTimeout: null,
+      musicInterval: null,
+      activeNodes: []
+    }
   };
 
   // DOM 元素
@@ -38,15 +68,12 @@
   // 创建粒子背景
   function createParticles() {
     const container = document.getElementById('particles');
-    const count = window.innerWidth < 768 ? 15 : 25;
+    const count = window.innerWidth < 768 ? CONFIG.PARTICLE_COUNT_MOBILE : CONFIG.PARTICLE_COUNT_DESKTOP;
 
     for (let i = 0; i < count; i++) {
       const particle = document.createElement('div');
       particle.className = 'particle';
-      particle.style.left = Math.random() * 100 + '%';
-      particle.style.width = particle.style.height = (Math.random() * 4 + 2) + 'px';
-      particle.style.animationDuration = (Math.random() * 15 + 10) + 's';
-      particle.style.animationDelay = (Math.random() * 10) + 's';
+      particle.style.cssText = `left:${Math.random()*100}%;width:${Math.random()*4+2}px;height:${Math.random()*4+2}px;animation-duration:${Math.random()*15+10}s;animation-delay:${Math.random()*10}s;will-change:transform;`;
       container.appendChild(particle);
     }
   }
@@ -82,10 +109,10 @@
   function loadData() {
     try {
       const data = JSON.parse(localStorage.getItem('glimmer_data') || '{}');
-      state.likedQuotes = new Set(data.likedQuotes || []);
-      state.caughtQuotes = new Set(data.caughtQuotes || []);
-      state.posts = data.posts || [];
-      state.comments = data.comments || {};
+      state.data.likedQuotes = new Set(data.likedQuotes || []);
+      state.data.caughtQuotes = new Set(data.caughtQuotes || []);
+      state.data.posts = data.posts || [];
+      state.data.comments = data.comments || {};
     } catch (e) {
       console.error('加载数据失败:', e);
     }
@@ -94,28 +121,25 @@
   // 保存数据
   function saveData() {
     const data = {
-      likedQuotes: [...state.likedQuotes],
-      caughtQuotes: [...state.caughtQuotes],
-      posts: state.posts,
-      comments: state.comments
+      likedQuotes: [...state.data.likedQuotes],
+      caughtQuotes: [...state.data.caughtQuotes],
+      posts: state.data.posts,
+      comments: state.data.comments
     };
     try {
       localStorage.setItem('glimmer_data', JSON.stringify(data));
     } catch (e) {
       if (e.name === 'QuotaExceededError') {
         console.warn('localStorage配额已满，清理旧数据');
-        // 保留最近50条帖子
-        if (state.posts.length > 50) {
-          state.posts = state.posts.slice(0, 50);
-          saveData();
-        }
+        state.data.posts = state.data.posts.slice(0, CONFIG.MAX_POSTS_STORAGE);
+        saveData();
       }
     }
   }
 
   // 渲染语录
   function renderQuote() {
-    const q = QUOTES[state.currentIndex];
+    const q = QUOTES[state.ui.currentIndex];
     if (!q) return;
 
     const categoryMap = { literature: '文学', philosophy: '哲学', psychology: '心理', counterintuitive: '反常识' };
@@ -127,12 +151,10 @@
     elements.quoteSource.textContent = `——《${q.source}》`;
     elements.badgeText.textContent = q.badge || '晨曦之光';
 
-    // 标签
     elements.quoteTag.innerHTML = '';
     if (q.tag) {
       elements.quoteTag.style.display = 'inline-block';
-      const tagText = document.createTextNode(q.tag);
-      elements.quoteTag.appendChild(tagText);
+      elements.quoteTag.appendChild(document.createTextNode(q.tag));
       if (catText) {
         const span = document.createElement('span');
         span.style.cssText = 'opacity:0.5;margin-left:4px;';
@@ -143,58 +165,51 @@
       elements.quoteTag.style.display = 'none';
     }
 
-    // 点赞数（确定性算法）
     const hash = q.id.split('').reduce((acc, c) => ((acc << 5) - acc + c.charCodeAt(0)) | 0, 0);
-    const likeCount = 50 + (Math.abs(hash) % 300);
+    const likeCount = CONFIG.LIKE_BASE_COUNT + (Math.abs(hash) % CONFIG.LIKE_RANDOM_RANGE);
     elements.likeCount.textContent = likeCount;
 
-    // 状态
-    elements.likeBtn.classList.toggle('liked', state.likedQuotes.has(q.id));
-    elements.catchBtn.classList.toggle('caught', state.caughtQuotes.has(q.id));
+    elements.likeBtn.classList.toggle('liked', state.data.likedQuotes.has(q.id));
+    elements.catchBtn.classList.toggle('caught', state.data.caughtQuotes.has(q.id));
 
-    // 评论数
-    const commentCount = (state.comments[q.id] || []).length;
+    const commentCount = (state.data.comments[q.id] || []).length;
     elements.commentCount.textContent = commentCount;
   }
 
   // 更新dots指示器
   function updateDots() {
-    const maxDots = Math.min(QUOTES.length, 10);
+    const maxDots = Math.min(QUOTES.length, CONFIG.MAX_DOTS);
     elements.dotsIndicator.innerHTML = '';
 
     for (let i = 0; i < maxDots; i++) {
       const dot = document.createElement('div');
-      dot.className = 'dot' + (i === state.currentIndex % maxDots ? ' active' : '');
+      dot.className = 'dot' + (i === state.ui.currentIndex % maxDots ? ' active' : '');
       elements.dotsIndicator.appendChild(dot);
     }
   }
 
   // 翻页
   function navigateQuote(direction) {
-    if (state.isDragging || state.isPageTransitioning) return;
-    state.isPageTransitioning = true;
+    if (state.ui.isDragging || state.ui.isPageTransitioning) return;
+    state.ui.isPageTransitioning = true;
 
     const card = elements.quoteCard;
-    const inner = card.querySelector('.quote-card-inner');
-
-    // 滑出动画
     const outDirection = direction === 'next' ? '-20px' : '20px';
+    
     card.style.transition = 'transform 0.25s ease-out, opacity 0.25s ease-out';
     card.style.transform = `translateY(${outDirection})`;
     card.style.opacity = '0';
 
     setTimeout(() => {
-      // 更新索引
       if (direction === 'next') {
-        state.currentIndex = (state.currentIndex + 1) % QUOTES.length;
+        state.ui.currentIndex = (state.ui.currentIndex + 1) % QUOTES.length;
       } else {
-        state.currentIndex = (state.currentIndex - 1 + QUOTES.length) % QUOTES.length;
+        state.ui.currentIndex = (state.ui.currentIndex - 1 + QUOTES.length) % QUOTES.length;
       }
 
       renderQuote();
       updateDots();
 
-      // 滑入动画
       card.style.transform = `translateY(${direction === 'next' ? '20px' : '-20px'})`;
       
       requestAnimationFrame(() => {
@@ -204,22 +219,20 @@
       });
 
       setTimeout(() => {
-        state.isPageTransitioning = false;
+        state.ui.isPageTransitioning = false;
       }, 350);
     }, 250);
   }
 
   // 页面切换
   function switchPage(pageName) {
-    if (state.isPageTransitioning || state.currentPage === pageName) return;
-    state.isPageTransitioning = true;
+    if (state.ui.isPageTransitioning || state.ui.currentPage === pageName) return;
+    state.ui.isPageTransitioning = true;
 
-    // 更新导航按钮
     document.querySelectorAll('.nav-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.page === pageName);
     });
 
-    // 页面切换动画
     const currentPage = document.querySelector('.page.active');
     const nextPage = document.getElementById('page' + pageName);
 
@@ -238,29 +251,27 @@
           nextPage.style.transform = 'translateY(0)';
         });
 
-        state.currentPage = pageName;
-        state.isPageTransitioning = false;
+        state.ui.currentPage = pageName;
+        state.ui.isPageTransitioning = false;
 
-        // 更新空间统计
         if (pageName === 'Space') {
           updateSpaceStats();
         }
-      }, 300);
+      }, CONFIG.PAGE_TRANSITION_MS);
     } else {
-      state.isPageTransitioning = false;
+      state.ui.isPageTransitioning = false;
     }
   }
 
   // 切换点赞
   function toggleLike() {
-    const q = QUOTES[state.currentIndex];
+    const q = QUOTES[state.ui.currentIndex];
     if (!q) return;
 
-    if (state.likedQuotes.has(q.id)) {
-      state.likedQuotes.delete(q.id);
+    if (state.data.likedQuotes.has(q.id)) {
+      state.data.likedQuotes.delete(q.id);
     } else {
-      state.likedQuotes.add(q.id);
-      // 心跳动画
+      state.data.likedQuotes.add(q.id);
       elements.likeBtn.style.transform = 'scale(1.3)';
       setTimeout(() => elements.likeBtn.style.transform = '', 300);
     }
@@ -271,15 +282,15 @@
 
   // 捕捉语录
   function catchQuote() {
-    const q = QUOTES[state.currentIndex];
+    const q = QUOTES[state.ui.currentIndex];
     if (!q) return;
 
-    if (state.caughtQuotes.has(q.id)) {
+    if (state.data.caughtQuotes.has(q.id)) {
       showToast('已捕捉过');
       return;
     }
 
-    state.caughtQuotes.add(q.id);
+    state.data.caughtQuotes.add(q.id);
     saveData();
     renderQuote();
     showToast('捕捉成功！');
@@ -293,6 +304,143 @@
     toast.textContent = msg;
     container.appendChild(toast);
     setTimeout(() => toast.remove(), 2000);
+  }
+
+  // HTML转义（高性能纯字符串替换）
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, c => HTML_ESCAPE_MAP[c]);
+  }
+
+  // 格式化时间
+  function formatTime(ts) {
+    const d = Date.now() - ts;
+    if (d <= 0) return '刚刚';
+    if (d < 60000) return '刚刚';
+    if (d < 3600000) return Math.floor(d / 60000) + '分钟前';
+    if (d < 86400000) return Math.floor(d / 3600000) + '小时前';
+    return Math.floor(d / 86400000) + '天前';
+  }
+
+  // 渲染帖子卡片（发布页）
+  function renderPosts() {
+    const list = elements.publishPostsList;
+    list.innerHTML = '';
+
+    if (state.data.posts.length === 0) {
+      elements.emptyPosts.style.display = 'block';
+      return;
+    }
+
+    elements.emptyPosts.style.display = 'none';
+    state.data.posts.forEach(post => list.appendChild(createPostCardElement(post, true)));
+  }
+
+  // 渲染捕捉列表
+  function renderCaughtList() {
+    const list = elements.caughtList;
+    list.innerHTML = '';
+    list.style.display = 'block';
+
+    if (state.data.caughtQuotes.size === 0) {
+      elements.emptySpace.style.display = 'block';
+      return;
+    }
+
+    elements.emptySpace.style.display = 'none';
+
+    state.data.caughtQuotes.forEach(id => {
+      const q = QUOTES.find(x => x.id === id);
+      if (!q) return;
+
+      const el = document.createElement('div');
+      el.className = 'glass';
+      el.style.cssText = 'padding: 16px; border-radius: 16px; margin-bottom: 12px; position: relative;';
+      el.innerHTML = `
+        <div style="font-family:var(--font-serif);font-size:15px;line-height:1.7;color:var(--amber-50);margin-bottom:8px;">"${q.zh}"</div>
+        <div style="font-size:12px;color:var(--text-muted);">——《${q.source}》</div>
+        <button class="remove-caught-btn" data-id="${q.id}" style="position:absolute;top:12px;right:12px;width:24px;height:24px;background:rgba(255,255,255,0.05);border:none;border-radius:50%;font-size:12px;cursor:pointer;color:var(--text-muted);display:flex;align-items:center;justify-content:center;">✕</button>
+      `;
+      list.appendChild(el);
+    });
+  }
+
+  // 渲染空间帖子列表
+  function renderSpacePostsList() {
+    const list = elements.spacePostsList;
+    list.innerHTML = '';
+    list.style.display = 'block';
+
+    if (state.data.posts.length === 0) {
+      elements.emptySpace.style.display = 'block';
+      return;
+    }
+
+    elements.emptySpace.style.display = 'none';
+    state.data.posts.forEach(post => list.appendChild(createPostCardElement(post, false)));
+  }
+
+  // 创建帖子卡片DOM元素
+  function createPostCardElement(post, showDelete) {
+    const el = document.createElement('div');
+    el.className = 'glass';
+    el.style.cssText = 'padding: 16px; border-radius: 16px; margin-bottom: 12px;';
+    
+    const moodHtml = post.mood ? `<span style="display:inline-block;font-size:11px;color:var(--amber-200);background:rgba(245,158,11,0.15);padding:2px 8px;border-radius:999px;margin-bottom:8px;">${escapeHtml(post.mood)}</span>` : '';
+    const deleteHtml = showDelete ? `<button class="delete-post-btn" data-id="${post.id}" style="cursor:pointer;background:none;border:none;color:var(--text-muted);">删除</button>` : '';
+    
+    el.innerHTML = `
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+        <span style="font-size:14px;font-weight:600;color:var(--amber-100);">微光用户</span>
+        <span style="font-size:12px;color:var(--text-muted);">${formatTime(post.time)}</span>
+      </div>
+      ${moodHtml}
+      <div style="font-size:15px;line-height:1.7;color:var(--text-secondary);margin-bottom:12px;">${escapeHtml(post.content)}</div>
+      <div style="display:flex;gap:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.1);">
+        <button class="like-post-btn" data-id="${post.id}" class="action-btn ${post.liked ? 'liked' : ''}" style="cursor:pointer;background:none;border:none;color:inherit;display:flex;align-items:center;gap:4px;">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+          <span>${post.likes}</span>
+        </button>
+        ${deleteHtml}
+      </div>
+    `;
+    return el;
+  }
+
+  // 切换帖子点赞
+  function toggleLikePost(id) {
+    const post = state.data.posts.find(p => p.id === id);
+    if (!post) return;
+
+    post.liked = !post.liked;
+    post.likes += post.liked ? 1 : -1;
+    if (post.likes < 0) post.likes = 0;
+
+    saveData();
+    renderPosts();
+    renderSpacePostsList();
+    updateSpaceStats();
+  }
+
+  // 删除帖子
+  function deletePost(id) {
+    if (!confirm('确定删除？')) return;
+
+    state.data.posts = state.data.posts.filter(p => p.id !== id);
+    saveData();
+    renderPosts();
+    renderSpacePostsList();
+    updateSpaceStats();
+    showToast('已删除');
+  }
+
+  // 移除捕捉
+  function removeCaught(id) {
+    if (!confirm('确定取消捕捉？')) return;
+    state.data.caughtQuotes.delete(id);
+    saveData();
+    renderQuote();
+    updateSpaceStats();
+    showToast('已取消');
   }
 
   // 发布内容
@@ -313,7 +461,7 @@
       liked: false
     };
 
-    state.posts.unshift(post);
+    state.data.posts.unshift(post);
     saveData();
 
     elements.publishInput.value = '';
@@ -322,75 +470,11 @@
     showToast('发布成功！');
   }
 
-  // 渲染帖子列表
-  function renderPosts() {
-    const list = elements.publishPostsList;
-    list.innerHTML = '';
-
-    if (state.posts.length === 0) {
-      elements.emptyPosts.style.display = 'block';
-      return;
-    }
-
-    elements.emptyPosts.style.display = 'none';
-
-    state.posts.forEach(post => {
-      const el = document.createElement('div');
-      el.className = 'glass';
-      el.style.cssText = 'padding: 16px; border-radius: 16px; margin-bottom: 12px;';
-      el.innerHTML = `
-        <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-          <span style="font-size:14px;font-weight:600;color:var(--amber-100);">微光用户</span>
-          <span style="font-size:12px;color:var(--text-muted);">${formatTime(post.time)}</span>
-        </div>
-        ${post.mood ? `<span style="display:inline-block;font-size:11px;color:var(--amber-200);background:rgba(245,158,11,0.15);padding:2px 8px;border-radius:999px;margin-bottom:8px;">${post.mood}</span>` : ''}
-        <div style="font-size:15px;line-height:1.7;color:var(--text-secondary);margin-bottom:12px;">${escapeHtml(post.content)}</div>
-        <div style="display:flex;gap:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.1);">
-          <div class="action-btn ${post.liked ? 'liked' : ''}" onclick="window.toggleLikePost('${post.id}')" style="cursor:pointer;">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-            <span>${post.likes}</span>
-          </div>
-          <div class="action-btn" onclick="window.deletePost('${post.id}')" style="cursor:pointer;color:var(--text-muted);">删除</div>
-        </div>
-      `;
-      list.appendChild(el);
-    });
-  }
-
-  // 切换帖子点赞
-  window.toggleLikePost = function(id) {
-    const post = state.posts.find(p => p.id === id);
-    if (!post) return;
-
-    if (post.liked) {
-      post.liked = false;
-      post.likes = Math.max(0, post.likes - 1);
-    } else {
-      post.liked = true;
-      post.likes += 1;
-    }
-
-    saveData();
-    renderPosts();
-    updateSpaceStats();
-  };
-
-  // 删除帖子
-  window.deletePost = function(id) {
-    if (!confirm('确定删除？')) return;
-
-    state.posts = state.posts.filter(p => p.id !== id);
-    saveData();
-    renderPosts();
-    updateSpaceStats();
-    showToast('已删除');
-  };
-
   // 更新空间统计
   function updateSpaceStats() {
-    elements.catchTotal.textContent = state.caughtQuotes.size;
-    elements.postTotal.textContent = state.posts.length;
-    const totalLikes = state.posts.reduce((sum, p) => sum + (p.likes || 0), 0);
+    elements.catchTotal.textContent = state.data.caughtQuotes.size;
+    elements.postTotal.textContent = state.data.posts.length;
+    const totalLikes = state.data.posts.reduce((sum, p) => sum + (p.likes || 0), 0);
     elements.likeTotal.textContent = totalLikes;
 
     const activeTab = document.querySelector('#pageSpace .tab-btn.active')?.dataset.tab || 'caught';
@@ -404,119 +488,28 @@
     }
   }
 
-  // 渲染捕捉列表
-  function renderCaughtList() {
-    const list = elements.caughtList;
-    list.innerHTML = '';
-    list.style.display = 'block';
-
-    if (state.caughtQuotes.size === 0) {
-      elements.emptySpace.style.display = 'block';
-      return;
-    }
-
-    elements.emptySpace.style.display = 'none';
-
-    state.caughtQuotes.forEach(id => {
-      const q = QUOTES.find(x => x.id === id);
-      if (!q) return;
-
-      const el = document.createElement('div');
-      el.className = 'glass';
-      el.style.cssText = 'padding: 16px; border-radius: 16px; margin-bottom: 12px; position: relative;';
-      el.innerHTML = `
-        <div style="font-family:var(--font-serif);font-size:15px;line-height:1.7;color:var(--amber-50);margin-bottom:8px;">"${q.zh}"</div>
-        <div style="font-size:12px;color:var(--text-muted);">——《${q.source}》</div>
-        <div style="position:absolute;top:12px;right:12px;width:24px;height:24px;background:rgba(255,255,255,0.05);border:none;border-radius:50%;font-size:12px;cursor:pointer;color:var(--text-muted);display:flex;align-items:center;justify-content:center;" onclick="window.removeCaught('${q.id}')">✕</div>
-      `;
-      list.appendChild(el);
-    });
-  }
-
-  // 渲染空间帖子列表
-  function renderSpacePostsList() {
-    const list = elements.spacePostsList;
-    list.innerHTML = '';
-    list.style.display = 'block';
-
-    if (state.posts.length === 0) {
-      elements.emptySpace.style.display = 'block';
-      return;
-    }
-
-    elements.emptySpace.style.display = 'none';
-
-    state.posts.forEach(post => {
-      const el = document.createElement('div');
-      el.className = 'glass';
-      el.style.cssText = 'padding: 16px; border-radius: 16px; margin-bottom: 12px;';
-      el.innerHTML = `
-        <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-          <span style="font-size:14px;font-weight:600;color:var(--amber-100);">微光用户</span>
-          <span style="font-size:12px;color:var(--text-muted);">${formatTime(post.time)}</span>
-        </div>
-        ${post.mood ? `<span style="display:inline-block;font-size:11px;color:var(--amber-200);background:rgba(245,158,11,0.15);padding:2px 8px;border-radius:999px;margin-bottom:8px;">${post.mood}</span>` : ''}
-        <div style="font-size:15px;line-height:1.7;color:var(--text-secondary);margin-bottom:12px;">${escapeHtml(post.content)}</div>
-        <div style="display:flex;gap:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.1);">
-          <div class="action-btn ${post.liked ? 'liked' : ''}" onclick="window.toggleLikePost('${post.id}')" style="cursor:pointer;">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-            <span>${post.likes}</span>
-          </div>
-          <div class="action-btn" onclick="window.deletePost('${post.id}')" style="cursor:pointer;color:var(--text-muted);">删除</div>
-        </div>
-      `;
-      list.appendChild(el);
-    });
-  }
-
-  // 移除捕捉
-  window.removeCaught = function(id) {
-    if (!confirm('确定取消捕捉？')) return;
-    state.caughtQuotes.delete(id);
-    saveData();
-    renderQuote();
-    updateSpaceStats();
-    showToast('已取消');
-  };
-
-  // 格式化时间
-  function formatTime(ts) {
-    const d = Date.now() - ts;
-    if (d < 60000) return '刚刚';
-    if (d < 3600000) return Math.floor(d / 60000) + '分钟前';
-    if (d < 86400000) return Math.floor(d / 3600000) + '小时前';
-    return Math.floor(d / 86400000) + '天前';
-  }
-
-  // HTML转义
-  function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
-
-  // 绑定事件
+  // ====== 事件绑定 ======
   function bindEvents() {
     const card = elements.quoteCard;
 
     // 触摸事件
     card.addEventListener('touchstart', (e) => {
-      state.isDragging = true;
-      state.startY = e.touches[0].clientY;
-      state.startX = e.touches[0].clientX;
+      state.ui.isDragging = true;
+      state.ui.startY = e.touches[0].clientY;
+      state.ui.startX = e.touches[0].clientX;
       card.style.transition = 'none';
     }, { passive: true });
 
     card.addEventListener('touchmove', (e) => {
-      if (!state.isDragging) return;
+      if (!state.ui.isDragging) return;
       
-      const diffY = state.startY - e.touches[0].clientY;
-      const diffX = Math.abs(state.startX - e.touches[0].clientX);
+      const diffY = state.ui.startY - e.touches[0].clientY;
+      const diffX = Math.abs(state.ui.startX - e.touches[0].clientX);
       
       // 如果水平滑动大于垂直滑动，不处理（可能是页面滚动）
       if (diffX > Math.abs(diffY)) return;
       
-      state.swipeOffset = diffY;
+      state.ui.swipeOffset = diffY;
 
       const maxOffset = 200;
       const clampedOffset = Math.max(-maxOffset, Math.min(maxOffset, diffY));
@@ -526,46 +519,44 @@
       card.style.opacity = Math.max(0.3, Math.min(1, opacity));
     }, { passive: true });
 
-    card.addEventListener('touchend', (e) => {
-      if (!state.isDragging) return;
-      state.isDragging = false;
+    card.addEventListener('touchend', () => {
+      if (!state.ui.isDragging) return;
+      state.ui.isDragging = false;
 
       card.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
       card.style.transform = '';
       card.style.opacity = '';
 
-      const diff = state.swipeOffset;
-      // 提高滑动阈值到60px，避免误触发
-      if (Math.abs(diff) > 60) {
-        navigateQuote(diff > 0 ? 'next' : 'prev');
+      if (Math.abs(state.ui.swipeOffset) > CONFIG.SWIPE_THRESHOLD) {
+        navigateQuote(state.ui.swipeOffset > 0 ? 'next' : 'prev');
       }
-      state.swipeOffset = 0;
+      state.ui.swipeOffset = 0;
     });
 
     // 鼠标滚轮
     document.addEventListener('wheel', (e) => {
-      if (state.currentPage !== 'Recommend') return;
-      if (state.wheelTimeout) return;
+      if (state.ui.currentPage !== 'Recommend' || state.audio.wheelTimeout) return;
 
-      state.wheelTimeout = setTimeout(() => {
-        state.wheelTimeout = null;
-      }, 800);
+      state.audio.wheelTimeout = setTimeout(() => {
+        state.audio.wheelTimeout = null;
+      }, CONFIG.WHEEL_COOLDOWN);
 
-      if (Math.abs(e.deltaY) > 30) {
+      if (Math.abs(e.deltaY) > CONFIG.WHEEL_SENSITIVITY) {
         navigateQuote(e.deltaY > 0 ? 'next' : 'prev');
       }
     }, { passive: true });
 
-    // 键盘导航
+    // 键盘导航（过滤输入框）
     document.addEventListener('keydown', (e) => {
-      if (state.currentPage === 'Recommend') {
-        if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-          e.preventDefault();
-          navigateQuote('next');
-        } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-          e.preventDefault();
-          navigateQuote('prev');
-        }
+      if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+      if (state.ui.currentPage !== 'Recommend') return;
+
+      if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        navigateQuote('next');
+      } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+        e.preventDefault();
+        navigateQuote('prev');
       }
     });
 
@@ -578,6 +569,9 @@
     elements.likeBtn.addEventListener('click', toggleLike);
     elements.catchBtn.addEventListener('click', catchQuote);
     elements.commentBtn.addEventListener('click', () => showToast('评论功能开发中'));
+    elements.musicBtn.addEventListener('click', toggleMusic);
+    elements.settingsBtn.addEventListener('click', () => showToast('设置功能开发中'));
+    elements.publishBtn.addEventListener('click', publishPost);
 
     // 心情标签
     document.querySelectorAll('.mood-tag').forEach(tag => {
@@ -586,9 +580,6 @@
         tag.classList.add('active');
       });
     });
-
-    // 发布按钮
-    elements.publishBtn.addEventListener('click', publishPost);
 
     // Tab切换（空间页）
     document.querySelectorAll('#pageSpace .tab-btn').forEach(btn => {
@@ -608,20 +599,31 @@
       });
     });
 
-    // 音乐按钮
-    elements.musicBtn.addEventListener('click', toggleMusic);
+    // 事件委托：帖子点赞、删除、移除捕捉
+    document.addEventListener('click', (e) => {
+      // 点赞帖子
+      const likeBtn = e.target.closest('.like-post-btn');
+      if (likeBtn) {
+        toggleLikePost(likeBtn.dataset.id);
+        return;
+      }
 
-    // 设置按钮
-    elements.settingsBtn.addEventListener('click', () => {
-      showToast('设置功能开发中');
+      // 删除帖子
+      const deleteBtn = e.target.closest('.delete-post-btn');
+      if (deleteBtn) {
+        deletePost(deleteBtn.dataset.id);
+        return;
+      }
+
+      // 移除捕捉
+      const removeBtn = e.target.closest('.remove-caught-btn');
+      if (removeBtn) {
+        removeCaught(removeBtn.dataset.id);
+      }
     });
   }
 
-  // 音乐播放 - 宁静氛围音乐
-  let musicInterval = null;
-  let activeNodes = [];
-
-  // 和弦定义 - 适合阅读的宁静音乐
+  // ====== 音乐播放 - 宁静氛围音乐 ======
   const CHORDS = [
     [261.63, 329.63, 392.00], // C大调
     [220.00, 261.63, 329.63], // A小调
@@ -631,7 +633,7 @@
   let activeChord = 0;
 
   function toggleMusic() {
-    if (state.isPlaying) {
+    if (state.audio.isPlaying) {
       stopMusic();
     } else {
       playAmbientMusic();
@@ -639,22 +641,24 @@
   }
 
   function playAmbientMusic() {
-    if (!state.audioCtx) {
-      state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (!state.audio.audioCtx) {
+      state.audio.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
 
-    state.audioCtx.resume().then(() => {
-      state.isPlaying = true;
+    state.audio.audioCtx.resume().then(() => {
+      state.audio.isPlaying = true;
       activeChord = 0;
       elements.musicBtn.style.color = 'var(--amber-300)';
       showToast('播放中 - 宁静氛围');
 
       playChord(0);
 
-      musicInterval = setInterval(() => {
-        const next = (activeChord + 1) % CHORDS.length;
-        fadeAndPlay(next);
-      }, 6000);
+      state.audio.musicInterval = setInterval(() => {
+        if (state.audio.isPlaying) {
+          const next = (activeChord + 1) % CHORDS.length;
+          fadeAndPlay(next);
+        }
+      }, CONFIG.AMBIENT_CHORD_DURATION_MS);
     }).catch(err => {
       console.error('音频上下文恢复失败:', err);
       showToast('音乐播放失败');
@@ -662,23 +666,25 @@
   }
 
   function playChord(index) {
-    const ctx = state.audioCtx;
+    const ctx = state.audio.audioCtx;
     if (!ctx) return;
 
     activeChord = index;
     const now = ctx.currentTime;
     const freqs = CHORDS[index];
 
-    activeNodes.forEach(({ osc, gain }) => {
+    // 停止旧节点
+    state.audio.activeNodes.forEach(({ osc, gain }) => {
       try {
         gain.gain.cancelScheduledValues(now);
         gain.gain.setValueAtTime(gain.gain.value, now);
-        gain.gain.linearRampToValueAtTime(0, now + 0.5);
-        osc.stop(now + 0.6);
+        gain.gain.linearRampToValueAtTime(0, now + CONFIG.AMBIENT_RELEASE_S);
+        osc.stop(now + CONFIG.AMBIENT_RELEASE_S + 0.1);
       } catch(e) {}
     });
-    activeNodes = [];
+    state.audio.activeNodes = [];
 
+    // 播放新和弦
     freqs.forEach((freq) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -687,34 +693,35 @@
       osc.frequency.value = freq;
       
       gain.gain.setValueAtTime(0, now);
-      gain.gain.linearRampToValueAtTime(0.06, now + 1.5);
+      gain.gain.linearRampToValueAtTime(CONFIG.AMBIENT_NOTE_VOLUME, now + CONFIG.AMBIENT_ATTACK_S);
       
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start(now);
 
-      activeNodes.push({ osc, gain });
+      state.audio.activeNodes.push({ osc, gain });
     });
 
+    // 低音
     const bass = ctx.createOscillator();
     const bassGain = ctx.createGain();
     bass.type = 'sine';
     bass.frequency.value = freqs[0] / 2;
     bassGain.gain.setValueAtTime(0, now);
-    bassGain.gain.linearRampToValueAtTime(0.04, now + 2);
+    bassGain.gain.linearRampToValueAtTime(CONFIG.AMBIENT_BASS_VOLUME, now + 2);
     bass.connect(bassGain);
     bassGain.connect(ctx.destination);
     bass.start(now);
-    activeNodes.push({ osc: bass, gain: bassGain });
+    state.audio.activeNodes.push({ osc: bass, gain: bassGain });
   }
 
   function fadeAndPlay(index) {
-    if (!state.isPlaying) return;
+    if (!state.audio.isPlaying) return;
     
-    const ctx = state.audioCtx;
+    const ctx = state.audio.audioCtx;
     const now = ctx.currentTime;
     
-    activeNodes.forEach(({ gain }) => {
+    state.audio.activeNodes.forEach(({ gain }) => {
       try {
         gain.gain.cancelScheduledValues(now);
         gain.gain.setValueAtTime(gain.gain.value, now);
@@ -723,28 +730,28 @@
     });
 
     setTimeout(() => {
-      if (state.isPlaying) {
+      if (state.audio.isPlaying) {
         playChord(index);
       }
-    }, 1200);
+    }, CONFIG.AMBIENT_FADE_OUT_MS);
   }
 
   function stopMusic() {
-    state.isPlaying = false;
+    state.audio.isPlaying = false;
     elements.musicBtn.style.color = '';
 
-    if (musicInterval) {
-      clearInterval(musicInterval);
-      musicInterval = null;
+    if (state.audio.musicInterval) {
+      clearInterval(state.audio.musicInterval);
+      state.audio.musicInterval = null;
     }
 
-    if (state.audioCtx) {
-      const now = state.audioCtx.currentTime;
-      activeNodes.forEach(({ gain }) => {
+    if (state.audio.audioCtx) {
+      const now = state.audio.audioCtx.currentTime;
+      state.audio.activeNodes.forEach(({ gain }) => {
         try {
           gain.gain.cancelScheduledValues(now);
           gain.gain.setValueAtTime(gain.gain.value, now);
-          gain.gain.linearRampToValueAtTime(0, now + 0.5);
+          gain.gain.linearRampToValueAtTime(0, now + CONFIG.AMBIENT_RELEASE_S);
         } catch(e) {}
       });
     }
