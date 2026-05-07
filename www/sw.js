@@ -1,8 +1,11 @@
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const CACHE_NAME = `glimmer-${CACHE_VERSION}`;
 const ASSETS = [
   './',
   './index.html',
+  './app.js',
+  './data.js',
+  './sw-register.js',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
@@ -27,30 +30,10 @@ self.addEventListener('activate', e => {
   );
 });
 
-// Fetch: cache-first for static assets, network-first for API
+// Fetch: cache-first for static assets
 self.addEventListener('fetch', e => {
-  const url = new URL(e.request.url);
-  
-  // Skip non-GET requests and API calls
   if (e.request.method !== 'GET') return;
   
-  // Network-first for API requests (always fresh)
-  if (url.pathname.includes('/api/') || url.pathname.includes('/chat/')) {
-    e.respondWith(
-      fetch(e.request)
-        .then(response => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
-          }
-          return response;
-        })
-        .catch(() => caches.match(e.request))
-    );
-    return;
-  }
-  
-  // Cache-first for static assets
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached;
@@ -62,7 +45,6 @@ self.addEventListener('fetch', e => {
         }
         return response;
       }).catch(() => {
-        // Fallback to index.html for navigation requests
         if (e.request.mode === 'navigate') {
           return caches.match('./index.html');
         }

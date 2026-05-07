@@ -7,6 +7,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#0f172a">
   <meta name="description" content="每日金句语录 - 每日微光，照亮心房">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'">
   <link rel="manifest" href="manifest.json">
   <title>Glimmer - 每日微光，照亮心房</title>
   <style>
@@ -57,7 +58,6 @@
       box-shadow: 0 8px 32px rgba(0,0,0,0.2);
     }
     .header {
-      padding-top: max(20px, env(safe-area-inset-top, 20px));
       padding: 20px 24px 12px; padding-top: max(20px, env(safe-area-inset-top, 20px));
       display: flex; justify-content: space-between;
       align-items: center; position: relative; z-index: 10;
@@ -316,11 +316,11 @@
         </div>
         <div class="tab-content">
           <div class="tab-panel active" id="caughtList"></div>
-          <div class="tab-panel" id="spacePostsList" style="display:none;"></div>
-        </div>
-        <div class="empty" id="emptySpace" style="display:none;">
-          <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
-          <div>暂无内容</div>
+          <div class="tab-panel" id="spacePostsList"></div>
+          <div class="empty" id="emptySpace" style="display:none;">
+            <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+            <div>暂无内容</div>
+          </div>
         </div>
       </section>
     </main>
@@ -347,5 +347,6 @@
 
   <script src="data.js"></script>
   <script src="app.js"></script>
+  <script src="sw-register.js"></script>
 </body>
 </html>
