@@ -6,13 +6,18 @@
   "scripts": {
     "cap:init": "capacitor init",
     "cap:add:android": "capacitor add android",
+    "cap:add:ios": "capacitor add ios",
     "cap:sync": "capacitor sync",
     "cap:open:android": "capacitor open android",
-    "build:apk": "cd android && ./gradlew assembleDebug"
+    "cap:open:ios": "capacitor open ios",
+    "build:apk": "cd android && ./gradlew assembleDebug",
+    "sync:ios": "cp index.html www/index.html && cp app.js www/app.js && cp data.js www/data.js && cp manifest.json www/manifest.json && npx cap sync ios",
+    "build:ios": "npm run sync:ios && npx cap open ios"
   },
   "devDependencies": {
+    "@capacitor/android": "^6.0.0",
     "@capacitor/cli": "^6.0.0",
     "@capacitor/core": "^6.0.0",
-    "@capacitor/android": "^6.0.0"
+    "@capacitor/ios": "^6.0.0"
   }
 }
