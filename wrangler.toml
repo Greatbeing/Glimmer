@@ -1,0 +1,25 @@
+// Cloudflare Workers 配置文件
+// 部署前请修改 account_id 和创建 KV 命名空间
+
+name = "glimmer-api"
+main = "workers/generate.js"
+compatibility_date = "2024-01-01"
+
+# 账户 ID（在 Cloudflare Dashboard 获取）
+# account_id = "your-account-id-here"
+
+# KV 命名空间绑定（用于限流计数）
+# 创建命令：wrangler kv:namespace create "GLIMITER_KV"
+[[kv_namespaces]]
+binding = "GLIMITER_KV"
+id = "your-kv-namespace-id-here"
+
+# 环境变量（API Key 等敏感信息）
+# 设置命令：wrangler secret put ALIYUN_API_KEY
+[vars]
+DAILY_LIMIT = "100"
+
+# 开发环境配置
+[dev]
+port = 8787
+local_protocol = "http"
